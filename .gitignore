@@ -1,0 +1,61 @@
+# Archivo: .gitignore en la raíz del proyecto
+
+# XAMPP / Apache
+.htaccess
+php.ini
+
+# Entorno y dependencias
+/vendor/
+/node_modules/
+/composer.lock
+/package-lock.json
+/yarn.lock
+
+# Configuraciones locales
+.env
+.env.local
+.env.*.local
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de sesión y caché
+/sessions/
+/cache/
+
+# Archivos subidos por usuarios
+/assets/uploads/
+!assets/uploads/.gitkeep
+
+# Archivos de backup
+*.bak
+*.sql
+
+# Archivos de base de datos
+*.db
+*.sqlite
+
+# Archivos compilados
+*.css.map
+*.js.map
+
+# Archivos de configuración local
+config/local*.php
+
+# Archivos de XAMPP/MAMP
+/xampp/
+/mamp/

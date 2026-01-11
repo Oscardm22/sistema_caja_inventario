@@ -1,61 +1,124 @@
-# Archivo: .gitignore en la raíz del proyecto
+# ============================================
+# ARCHIVOS DE CONFIGURACIÓN SENSIBLES
+# ============================================
 
-# XAMPP / Apache
-.htaccess
-php.ini
+# Configuraciones de base de datos locales
+config/database.local.php
+config/database.config.php
+config/env.local.php
+config/env.production.php
+config/env.php
+config/local/
+config/production/
 
-# Entorno y dependencias
-/vendor/
-/node_modules/
-/composer.lock
-/package-lock.json
-/yarn.lock
-
-# Configuraciones locales
+# Variables de entorno
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.testing
+.env.example.local
 
-# Archivos de IDE
+# Configuraciones específicas por entorno
+/config.local.php
+/local.config.php
+/production.config.php
+/development.config.php
+
+# ============================================
+# XAMPP / APACHE / SERVER
+# ============================================
+.htaccess
+php.ini
+httpd.conf
+.vhosts
+/xampp/
+/mamp/
+/wamp/
+
+# ============================================
+# DEPENDENCIAS Y PAQUETES
+# ============================================
+/vendor/
+/node_modules/
+/composer.lock
+/composer.phar
+/package-lock.json
+/yarn.lock
+
+# ============================================
+# ARCHIVOS DE IDE Y EDITORES
+# ============================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-*
 
-# Archivos de sistema
+# ============================================
+# ARCHIVOS DE SISTEMA
+# ============================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Archivos de log
+# ============================================
+# ARCHIVOS DE LOG Y CACHÉ
+# ============================================
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Archivos de sesión y caché
-/sessions/
+/storage/logs/
 /cache/
+/sessions/
+/tmp/
 
-# Archivos subidos por usuarios
+# ============================================
+# ARCHIVOS SUBIDOS POR USUARIOS
+# ============================================
 /assets/uploads/
+/public/uploads/
+/uploads/
 !assets/uploads/.gitkeep
+!public/uploads/.gitkeep
 
-# Archivos de backup
+# ============================================
+# BACKUPS Y ARCHIVOS TEMPORALES
+# ============================================
 *.bak
+*.backup
+*.tmp
+*.temp
 *.sql
+database/backups/
 
-# Archivos de base de datos
+# ============================================
+# ARCHIVOS DE BASE DE DATOS
+# ============================================
 *.db
 *.sqlite
+*.sqlite3
 
-# Archivos compilados
+# ============================================
+# ARCHIVOS COMPILADOS Y DE BUILD
+# ============================================
 *.css.map
 *.js.map
+/build/
+/dist/
+/public/build/
+/public/dist/
 
-# Archivos de configuración local
-config/local*.php
-
-# Archivos de XAMPP/MAMP
-/xampp/
-/mamp/
+# ============================================
+# TEST Y COVERAGE
+# ============================================
+/coverage/
+.phpunit.result.cache

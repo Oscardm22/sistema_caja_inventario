@@ -1,14 +1,12 @@
 <?php
-// Mostrar errores solo en desarrollo
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// Archivo: config/database.example.php
+// Este es un ejemplo. Copia este archivo como config/database.php y edita con tus credenciales
 
-define('DB_HOST', '127.0.0.1:3307');
-define('DB_NAME', 'sistema_caja_inventario');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DEBUG_MODE', false);
+define('DB_HOST', '127.0.0.1:3306');
+define('DB_NAME', 'nombre_base_datos');
+define('DB_USER', 'usuario_mysql');
+define('DB_PASS', 'contraseña_mysql');
+define('DEBUG_MODE', true); // false en producción
 
 class Database {
     private static $instance = null;
@@ -73,9 +71,5 @@ class Database {
 
 function getDB() {
     return Database::getInstance()->getConnection();
-}
-
-function getDatabase() {
-    return Database::getInstance();
 }
 ?>

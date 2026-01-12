@@ -3,7 +3,7 @@
 # ============================================
 
 # Configuraciones de base de datos locales
-config/database.local.php
+config/databasephp
 config/database.config.php
 config/env.local.php
 config/env.production.php

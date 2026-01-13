@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #1f2937; /* gray-800 */
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -70,10 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .login-card {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
         
         .input-group {
@@ -86,39 +85,64 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .input-group:focus-within label {
             color: #ffffff;
-            font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
-        .input-group:focus-within .input-icon {
-            color: #ffffff;
         }
         
         .input-container {
             position: relative;
         }
         
-        /* Mejora del contraste para texto del input */
+        /* Estilos base para inputs */
         .input-container input {
-            color: #f8fafc !important; /* Blanco más brillante */
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
         }
         
         .input-container input:focus {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.12) !important;
+            border-color: rgba(59, 130, 246, 0.5) !important; /* blue-500 con opacidad */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        /* IMPORTANTE: Corregir autocomplete de Chrome */
+        .input-container input:-webkit-autofill,
+        .input-container input:-webkit-autofill:hover,
+        .input-container input:-webkit-autofill:focus,
+        .input-container input:-webkit-autofill:active {
+            -webkit-text-fill-color: #ffffff !important;
+            -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.08) inset !important;
+            transition: background-color 5000s ease-in-out 0s !important;
+            caret-color: #ffffff !important;
+        }
+        
+        /* Para Firefox */
+        .input-container input:-moz-autofill,
+        .input-container input:-moz-autofill:hover,
+        .input-container input:-moz-autofill:focus {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            color: #ffffff !important;
+        }
+        
+        /* Para Edge */
+        .input-container input:-ms-input-placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        .input-container input::-ms-reveal,
+        .input-container input::-ms-clear {
+            filter: invert(100%);
         }
         
         .btn-login {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            background: #3b82f6; /* blue-500 */
+            color: white;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         .btn-login:hover {
+            background: #2563eb; /* blue-600 */
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
         }
         
         .btn-login:active {
@@ -127,13 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         .btn-login:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
         }
         
         .error-message {
             animation: slideDown 0.3s ease-out;
-            background: rgba(239, 68, 68, 0.25);
-            border: 1px solid rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5; /* red-300 */
         }
         
         @keyframes slideDown {
@@ -163,85 +188,56 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .glow {
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
         }
         
-        .glass-effect {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-        }
-        
-        /* Mejora de contraste para placeholders */
+        /* Placeholders */
         ::placeholder {
-            color: rgba(255, 255, 255, 0.7) !important;
+            color: rgba(255, 255, 255, 0.5) !important;
         }
         
-        /* Mejora de contraste para texto general */
-        .text-gray-300 {
-            color: rgba(255, 255, 255, 0.85) !important;
+        /* Iconos */
+        .icon-blue {
+            color: #3b82f6; /* blue-500 */
         }
         
-        .text-gray-400 {
-            color: rgba(255, 255, 255, 0.75) !important;
+        /* Textos */
+        .text-blue-light {
+            color: #93c5fd; /* blue-300 */
         }
         
-        .text-gray-500 {
-            color: rgba(255, 255, 255, 0.65) !important;
-        }
-        
-        /* Mejora específica para los labels */
-        label {
-            color: rgba(255, 255, 255, 0.9) !important;
-        }
-        
-        /* Mejor contraste para los íconos */
-        .input-icon, .fa-user, .fa-eye {
-            color: rgba(255, 255, 255, 0.8) !important;
-        }
-        
-        /* Efecto hover mejorado para íconos */
-        .fa-eye:hover, .fa-user {
-            color: #ffffff !important;
-        }
-        
-        /* Mejor contraste para bordes */
-        .border-white\/30 {
-            border-color: rgba(255, 255, 255, 0.4) !important;
-        }
-        
-        /* Sombra de texto para mejor legibilidad */
-        .text-shadow {
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        /* Bordes para focus */
+        .ring-blue {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="w-full max-w-md mx-auto p-6 fade-in">
-        <div class="login-card rounded-2xl p-8 glow">
+    <div class="w-full max-w-sm mx-auto p-6 fade-in">
+        <div class="login-card rounded-xl p-8 glow">
             <!-- Logo/Header -->
-            <div class="text-center mb-10 text-shadow">
-                <div class="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg border border-white/20">
-                    <i class="fas fa-cash-register text-4xl text-white"></i>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-white/5 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg border border-white/10">
+                    <i class="fas fa-cash-register text-3xl icon-blue"></i>
                 </div>
-                <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Sistema de Caja</h1>
-                <p class="text-white/90 text-lg">Gestión Integral de Negocios</p>
+                <h1 class="text-3xl font-bold text-white mb-2">Sistema de Caja</h1>
+                <p class="text-blue-light text-sm">Control de Inventario y Ventas</p>
             </div>
             
             <!-- Formulario de Login -->
-            <form method="POST" action="" class="space-y-8">
+            <form method="POST" action="" class="space-y-6" autocomplete="on">
                 <?php if ($error): ?>
-                    <div class="error-message text-white px-5 py-4 rounded-xl flex items-center">
-                        <i class="fas fa-exclamation-triangle mr-3 text-lg"></i>
-                        <span class="flex-1"><?php echo htmlspecialchars($error); ?></span>
+                    <div class="error-message px-4 py-3 rounded-lg flex items-center">
+                        <i class="fas fa-exclamation-circle mr-3"></i>
+                        <span class="flex-1 text-sm"><?php echo htmlspecialchars($error); ?></span>
                     </div>
                 <?php endif; ?>
                 
-                <div class="space-y-6">
+                <div class="space-y-4">
                     <!-- Username -->
                     <div class="input-group">
-                        <label for="username" class="block text-base font-medium mb-2 flex items-center">
-                            <i class="fas fa-user mr-2 input-icon"></i>Nombre de Usuario
+                        <label for="username" class="block text-sm font-medium text-white/90 mb-2">
+                            Usuario
                         </label>
                         <div class="input-container">
                             <input 
@@ -249,21 +245,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 id="username" 
                                 name="username" 
                                 required
-                                class="w-full px-5 py-4 bg-white/20 border border-white/40 rounded-xl placeholder-white/70 focus:outline-none focus:bg-white/30 focus:border-white/80 transition-all duration-300 text-white"
+                                class="w-full px-4 py-3 rounded-lg focus:outline-none transition-all duration-300 text-sm"
                                 placeholder="Ingresa tu usuario"
                                 value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
                                 autocomplete="username"
                             >
-                            <div class="absolute right-4 top-4">
-                                <i class="fas fa-user text-white/80"></i>
-                            </div>
                         </div>
                     </div>
                     
                     <!-- Contraseña -->
                     <div class="input-group">
-                        <label for="password" class="block text-base font-medium mb-2 flex items-center">
-                            <i class="fas fa-lock mr-2 input-icon"></i>Contraseña
+                        <label for="password" class="block text-sm font-medium text-white/90 mb-2">
+                            Contraseña
                         </label>
                         <div class="input-container">
                             <input 
@@ -271,49 +264,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 id="password" 
                                 name="password" 
                                 required
-                                class="w-full px-5 py-4 bg-white/20 border border-white/40 rounded-xl placeholder-white/70 focus:outline-none focus:bg-white/30 focus:border-white/80 transition-all duration-300 text-white pr-14"
+                                class="w-full px-4 py-3 rounded-lg focus:outline-none transition-all duration-300 text-sm pr-12"
                                 placeholder="••••••••"
                                 autocomplete="current-password"
                             >
-                            <div class="absolute right-4 top-4 flex items-center space-x-2">
+                            <div class="absolute right-3 top-3">
                                 <button 
                                     type="button" 
                                     onclick="togglePassword()"
-                                    class="text-white/80 hover:text-white transition-colors duration-200 focus:outline-none"
+                                    class="text-white/50 hover:text-white transition-colors duration-200 focus:outline-none"
                                     aria-label="Mostrar/ocultar contraseña"
                                 >
-                                    <i class="fas fa-eye text-lg" id="toggleIcon"></i>
+                                    <i class="fas fa-eye text-sm" id="toggleIcon"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Opciones adicionales -->
-                <div class="flex items-center justify-between pt-2">                    
-                    <a href="#" class="text-sm text-white/80 hover:text-white transition-colors duration-200 hover:underline">
-                        ¿Contraseña olvidada?
-                    </a>
-                </div>
-                
                 <!-- Botón de enviar -->
                 <button 
                     type="submit" 
-                    class="btn-login w-full text-purple-700 py-4 px-4 rounded-xl font-bold text-lg mt-2 focus:outline-none focus:ring-3 focus:ring-white/50"
+                    class="btn-login w-full py-3 px-4 rounded-lg font-semibold text-sm mt-4 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 >
-                    <i class="fas fa-sign-in-alt mr-3"></i>Iniciar Sesión
+                    <i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión
                 </button>
             </form>
-            
-            <!-- Pie de página -->
-            <div class="mt-10 pt-6 border-t border-white/20">
-                <p class="text-sm text-white/80 text-center">
-                    <i class="fas fa-copyright mr-1"></i>
-                    <?php echo date('Y'); ?> Sistema de Caja 
-                    <span class="mx-2">•</span>
-                    <span class="text-white">v1.0.0</span>
-                </p>
-            </div>
         </div>
     </div>
     
@@ -327,161 +303,127 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 passwordInput.type = 'text';
                 toggleIcon.classList.remove('fa-eye');
                 toggleIcon.classList.add('fa-eye-slash');
-                toggleIcon.classList.add('text-white');
+                toggleIcon.classList.add('text-blue-300');
             } else {
                 passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.remove('fa-eye-slash', 'text-blue-300');
                 toggleIcon.classList.add('fa-eye');
-                toggleIcon.classList.remove('text-white');
             }
         }
         
-        // Efectos de focus mejorados
+        // Efectos de focus
         document.addEventListener('DOMContentLoaded', function() {
             const inputs = document.querySelectorAll('input[type="text"], input[type="password"]');
             
             inputs.forEach(input => {
-                // Guardar valor inicial para efecto
-                const originalValue = input.value;
+                // Establecer color inicial
+                input.style.color = '#ffffff';
                 
-                // Efecto al hacer focus
                 input.addEventListener('focus', function() {
-                    this.classList.add('ring-2', 'ring-white/50');
-                    this.parentElement.classList.add('input-focused');
+                    this.parentElement.classList.add('ring-blue');
                 });
                 
-                // Efecto al perder focus
                 input.addEventListener('blur', function() {
-                    this.classList.remove('ring-2', 'ring-white/50');
-                    this.parentElement.classList.remove('input-focused');
-                    
-                    // Si tiene texto, mantener fondo más visible
-                    if (this.value.trim() !== '') {
-                        this.classList.add('has-text');
-                        this.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                    } else {
-                        this.classList.remove('has-text');
-                        this.style.backgroundColor = '';
-                    }
+                    this.parentElement.classList.remove('ring-blue');
                 });
                 
-                // Efecto al escribir
+                // Forzar estilo cuando cambia el valor (para autocomplete)
                 input.addEventListener('input', function() {
-                    if (this.value.trim() !== '') {
-                        this.classList.add('has-text');
-                        this.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                    } else {
-                        this.classList.remove('has-text');
-                        this.style.backgroundColor = '';
-                    }
+                    this.style.color = '#ffffff';
+                    this.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
                 });
                 
-                // Aplicar estilo inicial si ya hay texto (por ejemplo, después de error)
-                if (input.value.trim() !== '') {
-                    input.classList.add('has-text');
-                    input.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
+                // Verificar si ya tiene valor (por autocomplete al cargar)
+                if (input.value) {
+                    input.style.color = '#ffffff';
+                    input.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
                 }
             });
             
-            // Efecto para el checkbox de "recordar"
-            const rememberCheckbox = document.querySelector('input[name="remember"]');
-            const checkIcon = rememberCheckbox?.closest('label')?.querySelector('.fa-check');
-            
-            if (rememberCheckbox && checkIcon) {
-                rememberCheckbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        checkIcon.classList.remove('opacity-0');
-                        checkIcon.classList.add('opacity-100');
-                        // Cambiar color de fondo del checkbox
-                        this.closest('.relative').querySelector('div').style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
-                    } else {
-                        checkIcon.classList.remove('opacity-100');
-                        checkIcon.classList.add('opacity-0');
-                        this.closest('.relative').querySelector('div').style.backgroundColor = '';
-                    }
-                });
-            }
-            
-            // Auto-focus en el campo de username al cargar
+            // Auto-focus en el campo de username
             const usernameInput = document.getElementById('username');
             if (usernameInput) {
                 setTimeout(() => {
                     usernameInput.focus();
-                }, 400);
+                }, 300);
             }
             
-            // Validación en tiempo real
+            // Validación simple
             const form = document.querySelector('form');
             form.addEventListener('submit', function(e) {
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value.trim();
-                let hasError = false;
                 
-                // Resetear errores previos
-                document.querySelectorAll('.input-error').forEach(el => {
-                    el.classList.remove('input-error', 'border-red-400', 'shake');
-                });
-                
-                if (!username) {
-                    document.getElementById('username').classList.add('input-error', 'border-red-400', 'shake');
-                    hasError = true;
-                }
-                if (!password) {
-                    document.getElementById('password').classList.add('input-error', 'border-red-400', 'shake');
-                    hasError = true;
-                }
-                
-                if (hasError) {
+                if (!username || !password) {
                     e.preventDefault();
                     
-                    // Remover clases después de la animación
+                    if (!username) {
+                        document.getElementById('username').classList.add('shake', 'border-red-500');
+                    }
+                    if (!password) {
+                        document.getElementById('password').classList.add('shake', 'border-red-500');
+                    }
+                    
                     setTimeout(() => {
                         document.querySelectorAll('.shake').forEach(el => {
-                            el.classList.remove('shake');
+                            el.classList.remove('shake', 'border-red-500');
                         });
                     }, 600);
                 }
             });
             
-            // Efecto hover para botones y enlaces
-            document.querySelectorAll('a, button').forEach(element => {
-                element.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-1px)';
+            // Efecto hover para inputs
+            inputs.forEach(input => {
+                input.addEventListener('mouseenter', function() {
+                    this.style.borderColor = 'rgba(59, 130, 246, 0.4)';
                 });
-                element.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
+                
+                input.addEventListener('mouseleave', function() {
+                    if (!this.matches(':focus')) {
+                        this.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    }
                 });
             });
+            
+            // Solución adicional para autocomplete
+            // Forzar estilos después de que la página se carga completamente
+            setTimeout(() => {
+                inputs.forEach(input => {
+                    if (input.value) {
+                        input.style.color = '#ffffff';
+                        input.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                        input.style.setProperty('-webkit-text-fill-color', '#ffffff', 'important');
+                    }
+                });
+            }, 100);
         });
         
-        // Agregar efecto de "shake" para errores
+        // Efecto shake para errores
         const style = document.createElement('style');
         style.textContent = `
             @keyframes shake {
                 0%, 100% { transform: translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-                20%, 40%, 60%, 80% { transform: translateX(5px); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+                20%, 40%, 60%, 80% { transform: translateX(3px); }
             }
             .shake {
-                animation: shake 0.5s ease-in-out;
+                animation: shake 0.4s ease-in-out;
             }
             
-            /* Mejorar el contraste del texto seleccionado */
+            /* Mejor selección de texto */
             ::selection {
-                background-color: rgba(255, 255, 255, 0.3);
+                background-color: rgba(59, 130, 246, 0.3);
                 color: white;
             }
             
-            /* Estilo para inputs con texto */
-            .has-text {
-                background-color: rgba(255, 255, 255, 0.25) !important;
+            /* Corregir el color del texto en inputs llenados automáticamente */
+            input:-webkit-autofill {
+                -webkit-text-fill-color: #ffffff !important;
             }
             
-            /* Efecto para el foco del grupo */
-            .input-focused .input-icon {
-                color: #ffffff !important;
-                transform: scale(1.1);
-                transition: all 0.3s ease;
+            /* Para el cursor de escritura */
+            input {
+                caret-color: #3b82f6;
             }
         `;
         document.head.appendChild(style);

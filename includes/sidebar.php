@@ -35,7 +35,7 @@
         </a>
         <?php endif; ?>
         
-        <a href="../logout.php" class="block py-2 px-4 hover:bg-gray-700 mt-6">
+        <a href="/sistema_caja_inventario/logout.php" class="block py-2 px-4 hover:bg-gray-700 mt-6">
             <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
         </a>
     </nav>

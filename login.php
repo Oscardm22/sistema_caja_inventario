@@ -639,19 +639,6 @@ $success = $_GET['success'] ?? '';
                         hasError = true;
                     }
                     
-                    if (nuevaPassword && nuevaPassword.length < 6) {
-                        document.getElementById('nueva_password').classList.add('input-error', 'border-red-500', 'shake');
-                        hasError = true;
-                        setTimeout(() => alert('La contraseña debe tener al menos 6 caracteres.'), 10);
-                    }
-                    
-                    if (nuevaPassword && confirmarPassword && nuevaPassword !== confirmarPassword) {
-                        document.getElementById('nueva_password').classList.add('input-error', 'border-red-500', 'shake');
-                        document.getElementById('confirmar_password').classList.add('input-error', 'border-red-500', 'shake');
-                        hasError = true;
-                        setTimeout(() => alert('Las contraseñas no coinciden.'), 10);
-                    }
-                    
                     if (hasError) {
                         e.preventDefault();
                         

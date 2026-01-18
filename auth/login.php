@@ -1,13 +1,15 @@
 <?php
-// auth/login.php - ARCHIVO COMPLETO Y LIMPIO
+// auth/login.php - MODIFICADO PARA FLUJO DE DOS PASOS
+
 session_start();
 require_once '../config/database.php';
 
 // Incluir el procesamiento de login
 require_once 'login_processing.php';
 
-// Determinar si estamos en modo recuperación
-$recovery_mode = isset($_GET['recovery']) && $_GET['recovery'] === 'admin';
+// Determinar en qué paso estamos
+$recovery_step = isset($_GET['recovery_step']) ? (int)$_GET['recovery_step'] : 0;
+$username = $_GET['username'] ?? '';
 $success = $_GET['success'] ?? '';
 
 // Incluir el header
@@ -29,9 +31,11 @@ include 'login_header.php';
     </div>
 <?php endif; ?>
 
-<!-- Formulario según modo -->
-<?php if ($recovery_mode): ?>
-    <?php include 'recovery_form.php'; ?>
+<!-- Formulario según paso -->
+<?php if ($recovery_step == 1): ?>
+    <?php include 'recovery_form_step1.php'; ?>
+<?php elseif ($recovery_step == 2): ?>
+    <?php include 'recovery_form_step2.php'; ?>
 <?php else: ?>
     <?php include 'login_form.php'; ?>
 <?php endif; ?>

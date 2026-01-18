@@ -61,8 +61,8 @@
     
     <!-- Enlace para recuperación de administrador -->
     <div class="text-center mt-6 pt-4 border-t border-white/10">
-        <a href="login.php?recovery=admin" 
-           class="text-sm text-white/70 hover:text-blue-300 transition">
+        <a href="login.php?recovery_step=1"
+        class="text-sm text-white/70 hover:text-blue-300 transition">
             <i class="fas fa-user-shield mr-2"></i>¿Olvidaste la contraseña?
         </a>
     </div>

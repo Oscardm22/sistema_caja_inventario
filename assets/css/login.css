@@ -215,3 +215,91 @@ input {
     border-color: rgba(239, 68, 68, 0.5) !important;
     background: rgba(239, 68, 68, 0.1) !important;
 }
+
+.warning-message {
+    background: rgba(245, 158, 11, 0.15); /* amber con opacidad */
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fcd34d; /* amber-300 */
+}
+
+/* Transición suave para mostrar/ocultar preguntas */
+.input-group {
+    transition: all 0.3s ease;
+}
+
+/* Para los campos de respuestas */
+#pregunta1-group, #pregunta2-group {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estilo para las preguntas mostradas */
+.question-display {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #3b82f6;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+}
+
+/* Estilo específico para paso 2 */
+.question-display {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #3b82f6;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+/* Indicador de progreso */
+.progress-indicator {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.progress-step {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+}
+
+.progress-step.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.progress-step.completed {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+.progress-line {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    right: 15px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-50%);
+    z-index: 1;
+}

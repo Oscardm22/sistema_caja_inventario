@@ -1,31 +1,19 @@
-// assets/js/login.js
-
 // Función genérica para mostrar/ocultar contraseña
-function togglePassword(inputId, iconId) {
+function togglePassword(inputId, iconElement) {
     const passwordInput = document.getElementById(inputId);
-    const toggleIcon = document.getElementById(iconId);
     
-    if (passwordInput && toggleIcon) {
+    if (passwordInput && iconElement) {
         if (passwordInput.type === 'password') {
             passwordInput.type = 'text';
-            toggleIcon.classList.remove('fa-eye');
-            toggleIcon.classList.add('fa-eye-slash');
-            toggleIcon.classList.add('text-blue-300');
+            iconElement.classList.remove('fa-eye');
+            iconElement.classList.add('fa-eye-slash');
+            iconElement.classList.add('text-blue-300');
         } else {
             passwordInput.type = 'password';
-            toggleIcon.classList.remove('fa-eye-slash', 'text-blue-300');
-            toggleIcon.classList.add('fa-eye');
+            iconElement.classList.remove('fa-eye-slash', 'text-blue-300');
+            iconElement.classList.add('fa-eye');
         }
     }
-}
-
-// Para modo recuperación
-function toggleNewPassword() {
-    togglePassword('nueva_password', 'toggleIconNueva');
-}
-
-function toggleConfirmPassword() {
-    togglePassword('confirmar_password', 'toggleIconConfirmar');
 }
 
 // Inicialización cuando el DOM está listo
@@ -94,12 +82,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Validación para formulario de recuperación
+    // Validación para formulario de recuperación CON PREGUNTAS DE SEGURIDAD
     const recoveryForm = document.querySelector('form input[name="recovery_mode"]')?.closest('form');
     if (recoveryForm) {
         recoveryForm.addEventListener('submit', function(e) {
             const username = document.getElementById('username')?.value.trim();
-            const nombreCompleto = document.getElementById('nombre_completo')?.value.trim();
+            const respuesta1 = document.getElementById('respuesta_1')?.value.trim();
+            const respuesta2 = document.getElementById('respuesta_2')?.value.trim();
             const nuevaPassword = document.getElementById('nueva_password')?.value;
             const confirmarPassword = document.getElementById('confirmar_password')?.value;
             let hasError = false;
@@ -109,21 +98,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.classList.remove('input-error', 'border-red-500', 'shake');
             });
             
+            // Validar campos requeridos
             if (!username) {
                 document.getElementById('username').classList.add('input-error', 'border-red-500', 'shake');
                 hasError = true;
             }
-            if (!nombreCompleto) {
-                document.getElementById('nombre_completo').classList.add('input-error', 'border-red-500', 'shake');
+            
+            // Solo validar preguntas y contraseñas si las preguntas están visibles
+            const pregunta1Group = document.getElementById('pregunta1-group');
+            if (pregunta1Group && !respuesta1) {
+                document.getElementById('respuesta_1').classList.add('input-error', 'border-red-500', 'shake');
                 hasError = true;
             }
-            if (!nuevaPassword) {
-                document.getElementById('nueva_password').classList.add('input-error', 'border-red-500', 'shake');
+            
+            const pregunta2Group = document.getElementById('pregunta2-group');
+            if (pregunta2Group && !respuesta2) {
+                document.getElementById('respuesta_2').classList.add('input-error', 'border-red-500', 'shake');
                 hasError = true;
             }
-            if (!confirmarPassword) {
-                document.getElementById('confirmar_password').classList.add('input-error', 'border-red-500', 'shake');
-                hasError = true;
+            
+            if (pregunta1Group && pregunta2Group) {
+                if (!nuevaPassword) {
+                    document.getElementById('nueva_password').classList.add('input-error', 'border-red-500', 'shake');
+                    hasError = true;
+                }
+                if (!confirmarPassword) {
+                    document.getElementById('confirmar_password').classList.add('input-error', 'border-red-500', 'shake');
+                    hasError = true;
+                }
+                
+                // Validar que las contraseñas coincidan
+                if (nuevaPassword && confirmarPassword && nuevaPassword !== confirmarPassword) {
+                    document.getElementById('confirmar_password').classList.add('input-error', 'border-red-500', 'shake');
+                    hasError = true;
+                    // Mostrar mensaje de error
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message mt-2 px-3 py-2 rounded text-sm';
+                    errorMsg.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>Las contraseñas no coinciden';
+                    
+                    const container = document.getElementById('confirmar_password').parentNode;
+                    if (!container.querySelector('.error-message')) {
+                        container.appendChild(errorMsg);
+                    }
+                }
+                
+                // Validar longitud mínima de contraseña
+                if (nuevaPassword && nuevaPassword.length < 6) {
+                    document.getElementById('nueva_password').classList.add('input-error', 'border-red-500', 'shake');
+                    hasError = true;
+                    
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'error-message mt-2 px-3 py-2 rounded text-sm';
+                    errorMsg.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i>Mínimo 6 caracteres';
+                    
+                    const container = document.getElementById('nueva_password').parentNode;
+                    if (!container.querySelector('.error-message')) {
+                        container.appendChild(errorMsg);
+                    }
+                }
             }
             
             if (hasError) {
@@ -134,6 +166,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         el.classList.remove('shake');
                     });
                 }, 600);
+                
+                // Remover mensajes de error después de 3 segundos
+                setTimeout(() => {
+                    document.querySelectorAll('.error-message').forEach(el => {
+                        el.remove();
+                    });
+                }, 3000);
             }
         });
     }
@@ -151,6 +190,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Agregar botones para mostrar/ocultar contraseñas en modo recuperación
+    const nuevaPasswordInput = document.getElementById('nueva_password');
+    const confirmPasswordInput = document.getElementById('confirmar_password');
+    
+    if (nuevaPasswordInput) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'absolute right-3 top-3 text-white/50 hover:text-white transition-colors duration-200 focus:outline-none';
+        toggleBtn.innerHTML = '<i class="fas fa-eye text-sm"></i>';
+        toggleBtn.setAttribute('aria-label', 'Mostrar/ocultar contraseña');
+        toggleBtn.addEventListener('click', function() {
+            togglePassword('nueva_password', this.querySelector('i'));
+        });
+        
+        // Asegurarse de que el contenedor tenga posición relativa
+        if (nuevaPasswordInput.parentNode.style.position !== 'relative') {
+            nuevaPasswordInput.parentNode.style.position = 'relative';
+        }
+        nuevaPasswordInput.parentNode.appendChild(toggleBtn);
+    }
+    
+    if (confirmPasswordInput) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'absolute right-3 top-3 text-white/50 hover:text-white transition-colors duration-200 focus:outline-none';
+        toggleBtn.innerHTML = '<i class="fas fa-eye text-sm"></i>';
+        toggleBtn.setAttribute('aria-label', 'Mostrar/ocultar contraseña');
+        toggleBtn.addEventListener('click', function() {
+            togglePassword('confirmar_password', this.querySelector('i'));
+        });
+        
+        // Asegurarse de que el contenedor tenga posición relativa
+        if (confirmPasswordInput.parentNode.style.position !== 'relative') {
+            confirmPasswordInput.parentNode.style.position = 'relative';
+        }
+        confirmPasswordInput.parentNode.appendChild(toggleBtn);
+    }
+    
+    // Función para verificar usuario en tiempo real (opcional)
+    const recoveryUsernameInput = document.getElementById('username');
+    if (recoveryUsernameInput && recoveryForm) {
+        let checkTimeout;
+        
+        recoveryUsernameInput.addEventListener('input', function() {
+            clearTimeout(checkTimeout);
+            
+            // Esperar 500ms después de que el usuario deje de escribir
+            checkTimeout = setTimeout(() => {
+                const username = this.value.trim();
+                if (username.length >= 3) {
+                    // Aquí podrías implementar AJAX para verificar el usuario
+                    // sin recargar la página, pero mantenemos simple por ahora
+                }
+            }, 500);
+        });
+    }
+    
     // Solución adicional para autocomplete
     setTimeout(() => {
         inputs.forEach(input => {
@@ -161,4 +257,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }, 100);
+    
+    // Limpiar validaciones cuando el usuario comienza a escribir
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('input-error', 'border-red-500', 'shake');
+            
+            // Remover mensajes de error específicos
+            const errorMsg = this.parentNode.querySelector('.error-message');
+            if (errorMsg) {
+                errorMsg.remove();
+            }
+        });
+    });
 });

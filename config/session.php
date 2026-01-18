@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 // Verificar si el usuario está logueado
 function checkAuth() {
     if (!isset($_SESSION['user_id'])) {
-        header('Location: ../login.php');
+        header('Location: ../auth/login.php');
         exit();
     }
 }
@@ -15,7 +15,7 @@ function checkAuth() {
 // Verificar permisos según rol
 function checkPermission($requiredRoles = []) {
     if (!isset($_SESSION['user_role'])) {
-        header('Location: ../login.php');
+        header('Location: ../auth/login.php');
         exit();
     }
     

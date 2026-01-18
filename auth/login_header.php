@@ -6,7 +6,7 @@
     <title>Iniciar Sesión - Sistema Caja</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <?php include 'login_styles.php'; ?>
+    <link rel="stylesheet" href="../assets/css/login.css">
 </head>
 <body>
     <div class="w-full max-w-sm mx-auto p-6 fade-in">

@@ -1,5 +1,5 @@
 <?php
-// auth/login.php - ARCHIVO COMPLETO
+// auth/login.php - ARCHIVO COMPLETO Y LIMPIO
 session_start();
 require_once '../config/database.php';
 
@@ -39,6 +39,7 @@ include 'login_header.php';
 </div> <!-- Cierre del div login-card -->
 </div> <!-- Cierre del div container -->
 
-<?php include 'login_scripts.php'; ?>
+<!-- Incluir JavaScript -->
+<script src="../assets/js/login.js"></script>
 </body>
 </html>

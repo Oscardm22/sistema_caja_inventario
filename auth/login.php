@@ -2,6 +2,13 @@
 // auth/login.php - MODIFICADO PARA FLUJO DE DOS PASOS
 
 session_start();
+
+// VERIFICACIÓN NUEVA: Si el usuario ya está autenticado, redirigir al dashboard
+if (isset($_SESSION['user_id']) && isset($_SESSION['user_role'])) {
+    header('Location: ../index.php');
+    exit();
+}
+
 require_once '../config/database.php';
 
 // Incluir el procesamiento de login

@@ -169,5 +169,124 @@ class UsuariosController {
         
         return $errors;
     }
+
+    public function crearAction() {
+        // Cargar preguntas de seguridad
+        require_once '../../auth/security_questions.php';
+        
+        $formData = [
+            'nombre' => '',
+            'username' => '',
+            'rol' => 'cajero',
+            'estado' => 'activo',
+            'pregunta1' => '',
+            'respuesta1' => '',
+            'pregunta2' => '',
+            'respuesta2' => ''
+        ];
+        
+        $errors = [];
+        
+        // Procesar formulario si se envió
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $result = $this->procesarCreacion();
+            
+            if (isset($result['success']) && $result['success']) {
+                $_SESSION['success_message'] = 'Usuario creado exitosamente';
+                header('Location: index.php');
+                exit();
+            }
+            
+            $errors = $result['errors'] ?? [];
+            $formData = $result['formData'] ?? $formData;
+        }
+        
+        return [
+            'errors' => $errors,
+            'security_questions' => $security_questions,
+            'formData' => $formData
+        ];
+    }
+
+    private function procesarCreacion() {
+        $formData = [
+            'nombre' => trim($_POST['nombre'] ?? ''),
+            'username' => trim($_POST['username'] ?? ''),
+            'password' => $_POST['password'] ?? '',
+            'confirm_password' => $_POST['confirm_password'] ?? '',
+            'rol' => $_POST['rol'] ?? 'cajero',
+            'estado' => $_POST['estado'] ?? 'activo',
+            'pregunta1' => trim($_POST['pregunta_seguridad_1'] ?? ''),
+            'respuesta1' => trim($_POST['respuesta_seguridad_1'] ?? ''),
+            'pregunta2' => trim($_POST['pregunta_seguridad_2'] ?? ''),
+            'respuesta2' => trim($_POST['respuesta_seguridad_2'] ?? '')
+        ];
+        
+        $errors = [];
+        
+        // Validaciones
+        $errors = array_merge($errors, $this->validarDatosNuevoUsuario($formData));
+        
+        // Si no hay errores, crear el usuario
+        if (empty($errors)) {
+            $success = $this->model->crearUsuario($formData);
+            
+            if ($success) {
+                return ['success' => true];
+            } else {
+                $errors['general'] = 'Error al crear el usuario';
+            }
+        }
+        
+        return [
+            'errors' => $errors,
+            'formData' => $formData
+        ];
+    }
+
+    private function validarDatosNuevoUsuario($data) {
+        $errors = [];
+        
+        if (empty($data['nombre'])) {
+            $errors['nombre'] = 'El nombre es obligatorio';
+        } elseif (strlen($data['nombre']) < 3) {
+            $errors['nombre'] = 'El nombre debe tener al menos 3 caracteres';
+        }
+        
+        if (empty($data['username'])) {
+            $errors['username'] = 'El nombre de usuario es obligatorio';
+        } elseif (strlen($data['username']) < 3) {
+            $errors['username'] = 'El usuario debe tener al menos 3 caracteres';
+        } else {
+            if ($this->model->usernameExiste($data['username'])) {
+                $errors['username'] = 'Este nombre de usuario ya está registrado';
+            }
+        }
+        
+        if (empty($data['password'])) {
+            $errors['password'] = 'La contraseña es obligatoria';
+        } elseif (strlen($data['password']) < 6) {
+            $errors['password'] = 'La contraseña debe tener al menos 6 caracteres';
+        }
+        
+        if ($data['password'] !== $data['confirm_password']) {
+            $errors['confirm_password'] = 'Las contraseñas no coinciden';
+        }
+        
+        if (empty($data['pregunta1']) || empty($data['respuesta1'])) {
+            $errors['pregunta1'] = 'La primera pregunta de seguridad es obligatoria';
+        }
+        
+        if (empty($data['pregunta2']) || empty($data['respuesta2'])) {
+            $errors['pregunta2'] = 'La segunda pregunta de seguridad es obligatoria';
+        }
+        
+        // Validar que no sean la misma pregunta
+        if ($data['pregunta1'] === $data['pregunta2']) {
+            $errors['pregunta2'] = 'Debes seleccionar preguntas diferentes';
+        }
+        
+        return $errors;
+    }
 }
 ?>

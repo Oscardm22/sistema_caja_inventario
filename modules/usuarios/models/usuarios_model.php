@@ -164,5 +164,25 @@ class UsuariosModel {
         
         return $success;
     }
+    
+    public function crearUsuario($data) {
+        $hashed_password = password_hash($data['password'], PASSWORD_DEFAULT);
+        
+        $query = "INSERT INTO usuarios (nombre, username, password, rol, estado, 
+                pregunta_seguridad_1, respuesta_seguridad_1, 
+                pregunta_seguridad_2, respuesta_seguridad_2) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("sssssssss", 
+            $data['nombre'], $data['username'], $hashed_password, $data['rol'], $data['estado'],
+            $data['pregunta1'], $data['respuesta1'], $data['pregunta2'], $data['respuesta2']
+        );
+        
+        $success = $stmt->execute();
+        $stmt->close();
+        
+        return $success;
+    }
 }
 ?>

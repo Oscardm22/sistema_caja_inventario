@@ -67,3 +67,38 @@
         -webkit-overflow-scrolling: touch;
     }
 }
+
+/* Estilos para botón generar contraseña */
+.password-generator {
+    transition: all 0.2s ease;
+}
+
+.password-generator:hover {
+    transform: translateY(-1px);
+}
+
+/* Estilos para indicador de fortaleza de contraseña */
+.password-strength {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 4px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-weak { width: 25%; background-color: #ef4444; }
+.strength-fair { width: 50%; background-color: #f59e0b; }
+.strength-good { width: 75%; background-color: #3b82f6; }
+.strength-strong { width: 100%; background-color: #10b981; }
+
+/* Estilos para mensajes de ayuda */
+.field-tip {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.field-tip i {
+    margin-right: 0.25rem;
+}

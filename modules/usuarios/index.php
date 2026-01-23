@@ -1,13 +1,12 @@
 <?php
-// modules/usuarios/index.php - RUTAS CORRECTAS
-require_once '../../config/session.php';      // Subir 2 niveles
-require_once '../../config/database.php';     // Subir 2 niveles
+require_once '../../config/session.php';
+require_once '../../config/database.php';
 
 // Solo admin puede acceder
 checkPermission(['admin']);
 
 $pageTitle = "Gestión de Usuarios";
-require_once '../../includes/header.php';     // Subir 2 niveles
+require_once '../../includes/header.php';
 
 // Obtener conexión a la base de datos
 $database = Database::getInstance();
@@ -70,7 +69,7 @@ $stmt_stats->close();
 <!-- Contenedor principal -->
 <div class="flex">
     <!-- Sidebar -->
-    <?php require_once '../../includes/sidebar.php'; ?>  <!-- Subir 2 niveles -->
+    <?php require_once '../../includes/sidebar.php'; ?>
     
     <!-- Contenido principal -->
     <main class="ml-64 flex-1 p-6 min-h-screen">
@@ -377,4 +376,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php require_once '../../includes/footer.php'; ?>  <!-- Subir 2 niveles -->
+<?php require_once '../../includes/footer.php'; ?>

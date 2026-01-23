@@ -359,7 +359,7 @@ if ($caja_actual) {
                 <i class="fas fa-user-shield mr-2"></i>Acciones de Administrador
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a href="usuarios/" class="flex items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                <a href="modules/usuarios/" class="flex items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
                     <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
                         <i class="fas fa-user-cog text-xl"></i>
                     </div>

@@ -315,56 +315,372 @@ $stmt_stats->close();
     </main>
 </div>
 
+<!-- Estilos para notificaciones -->
+<style>
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    min-width: 300px;
+    max-width: 400px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.notification.hide {
+    animation: slideOut 0.3s ease-in forwards;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+</style>
+
 <!-- JavaScript para acciones -->
 <script>
-// Función para cambiar estado
+// Sistema de notificaciones
+function showNotification(message, type = 'info', duration = 5000) {
+    const notificationTypes = {
+        'success': {
+            icon: 'fas fa-check-circle',
+            bgColor: 'bg-green-50',
+            textColor: 'text-green-800',
+            borderColor: 'border-green-200',
+            iconColor: 'text-green-400'
+        },
+        'error': {
+            icon: 'fas fa-exclamation-circle',
+            bgColor: 'bg-red-50',
+            textColor: 'text-red-800',
+            borderColor: 'border-red-200',
+            iconColor: 'text-red-400'
+        },
+        'warning': {
+            icon: 'fas fa-exclamation-triangle',
+            bgColor: 'bg-yellow-50',
+            textColor: 'text-yellow-800',
+            borderColor: 'border-yellow-200',
+            iconColor: 'text-yellow-400'
+        },
+        'info': {
+            icon: 'fas fa-info-circle',
+            bgColor: 'bg-blue-50',
+            textColor: 'text-blue-800',
+            borderColor: 'border-blue-200',
+            iconColor: 'text-blue-400'
+        }
+    };
+    
+    const config = notificationTypes[type] || notificationTypes.info;
+    
+    // Crear elemento de notificación
+    const notification = document.createElement('div');
+    notification.className = `notification ${config.bgColor} ${config.borderColor} border rounded-lg shadow-lg p-4 mb-2`;
+    
+    notification.innerHTML = `
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="${config.icon} ${config.iconColor} text-lg"></i>
+            </div>
+            <div class="ml-3 w-0 flex-1">
+                <p class="text-sm font-medium ${config.textColor}">${message}</p>
+            </div>
+            <div class="ml-4 flex-shrink-0 flex">
+                <button type="button" class="inline-flex ${config.textColor} hover:opacity-75 focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Agregar al contenedor de notificaciones
+    let container = document.getElementById('notifications-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notifications-container';
+        container.className = 'notifications';
+        document.body.appendChild(container);
+    }
+    container.appendChild(notification);
+    
+    // Configurar botón de cerrar
+    const closeBtn = notification.querySelector('button');
+    closeBtn.onclick = () => {
+        notification.classList.add('hide');
+        setTimeout(() => notification.remove(), 300);
+    };
+    
+    // Auto-cerrar después de la duración
+    if (duration > 0) {
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.classList.add('hide');
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, duration);
+    }
+    
+    return notification;
+}
+
+// Función para obtener la URL base correcta
+function getBaseUrl() {
+    const currentPath = window.location.pathname;
+    
+    if (currentPath.includes('/modules/usuarios/')) {
+        const pathParts = currentPath.split('/modules/usuarios/');
+        return window.location.origin + pathParts[0] + '/modules/usuarios/';
+    }
+    
+    return window.location.origin + currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+}
+
+// Función para cambiar estado con notificación bonita
 function cambiarEstado(userId, nuevoEstado) {
-    if (confirm('¿Estás seguro de cambiar el estado de este usuario?')) {
-        fetch('acciones.php', {
+    const actionText = nuevoEstado === 'activo' ? 'activar' : 'desactivar';
+    
+    // Crear modal personalizado para confirmación
+    const modalHtml = `
+        <div id="confirm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full ${nuevoEstado === 'activo' ? 'bg-green-100' : 'bg-yellow-100'}">
+                        <i class="${nuevoEstado === 'activo' ? 'fas fa-user-check text-green-600' : 'fas fa-user-slash text-yellow-600'} text-xl"></i>
+                    </div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">
+                        ${nuevoEstado === 'activo' ? 'Activar Usuario' : 'Desactivar Usuario'}
+                    </h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p class="text-sm text-gray-500">
+                            ¿Estás seguro de ${actionText} este usuario?
+                        </p>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-2 transition-colors">
+                            Cancelar
+                        </button>
+                        <button id="confirm-btn" class="px-4 py-2 ${nuevoEstado === 'activo' ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white rounded-md transition-colors">
+                            <i class="${nuevoEstado === 'activo' ? 'fas fa-user-check' : 'fas fa-user-slash'} mr-2"></i>
+                            ${nuevoEstado === 'activo' ? 'Activar' : 'Desactivar'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar modal al body
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = modalHtml;
+    document.body.appendChild(modalContainer);
+    
+    // Configurar botones del modal
+    const modal = document.getElementById('confirm-modal');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const confirmBtn = document.getElementById('confirm-btn');
+    
+    // Función para cerrar modal
+    const closeModal = () => {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            if (modalContainer.parentNode) {
+                modalContainer.remove();
+            }
+        }, 300);
+    };
+    
+    // Evento cancelar
+    cancelBtn.onclick = closeModal;
+    
+    // Evento confirmar
+    confirmBtn.onclick = () => {
+        closeModal();
+        
+        const baseUrl = getBaseUrl();
+        const loadingNotification = showNotification('Procesando solicitud...', 'info', 0);
+        
+        fetch(baseUrl + 'acciones.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: `action=cambiar_estado&id=${userId}&estado=${nuevoEstado}`
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
         .then(data => {
+            // Remover loading
+            if (loadingNotification.parentNode) {
+                loadingNotification.remove();
+            }
+            
             if (data.success) {
-                alert(data.message);
-                location.reload();
+                showNotification(data.message, 'success');
+                // Recargar después de 1.5 segundos
+                setTimeout(() => location.reload(), 1500);
             } else {
-                alert('Error: ' + data.message);
+                showNotification(data.message, 'error', 6000);
             }
         })
         .catch(error => {
-            alert('Error de conexión: ' + error);
+            // Remover loading
+            if (loadingNotification.parentNode) {
+                loadingNotification.remove();
+            }
+            
+            console.error('Error:', error);
+            showNotification('Error de conexión con el servidor', 'error', 6000);
         });
-    }
+    };
+    
+    // Cerrar al hacer clic fuera del modal
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    };
+    
+    // Mostrar modal con animación
+    setTimeout(() => {
+        modal.style.transition = 'opacity 0.3s ease';
+        modal.style.opacity = '1';
+    }, 10);
 }
 
-// Función para eliminar usuario
+// Función para eliminar usuario con modal bonito
 function confirmarEliminacion(userId, nombre) {
-    if (confirm(`¿Estás seguro de eliminar al usuario "${nombre}"?\nEsta acción no se puede deshacer.`)) {
-        fetch('acciones.php', {
+    // Crear modal personalizado
+    const modalHtml = `
+        <div id="delete-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Confirmar Eliminación</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p class="text-sm text-gray-500">
+                            ¿Estás seguro de eliminar al usuario <span class="font-semibold">"${nombre}"</span>?
+                        </p>
+                        <p class="text-sm text-red-500 mt-2 font-medium">
+                            <i class="fas fa-exclamation-circle mr-1"></i>
+                            Esta acción no se puede deshacer.
+                        </p>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button id="cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 mr-2 transition-colors">
+                            Cancelar
+                        </button>
+                        <button id="confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                            <i class="fas fa-trash mr-2"></i>Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Agregar modal al body
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = modalHtml;
+    document.body.appendChild(modalContainer);
+    
+    // Configurar botones del modal
+    const modal = document.getElementById('delete-modal');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const confirmBtn = document.getElementById('confirm-btn');
+    
+    // Función para cerrar modal
+    const closeModal = () => {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            if (modalContainer.parentNode) {
+                modalContainer.remove();
+            }
+        }, 300);
+    };
+    
+    // Evento cancelar
+    cancelBtn.onclick = closeModal;
+    
+    // Evento confirmar
+    confirmBtn.onclick = () => {
+        closeModal();
+        
+        const baseUrl = getBaseUrl();
+        const loadingNotification = showNotification('Eliminando usuario...', 'info', 0);
+        
+        fetch(baseUrl + 'acciones.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: `action=eliminar&id=${userId}`
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        })
         .then(data => {
+            // Remover loading
+            if (loadingNotification.parentNode) {
+                loadingNotification.remove();
+            }
+            
             if (data.success) {
-                alert(data.message);
-                location.reload();
+                showNotification(data.message, 'success');
+                setTimeout(() => location.reload(), 1500);
             } else {
-                alert('Error: ' + data.message);
+                showNotification(data.message, 'error', 6000);
             }
         })
         .catch(error => {
-            alert('Error de conexión: ' + error);
+            // Remover loading
+            if (loadingNotification.parentNode) {
+                loadingNotification.remove();
+            }
+            
+            console.error('Error:', error);
+            showNotification('Error de conexión con el servidor', 'error', 6000);
         });
-    }
+    };
+    
+    // Cerrar al hacer clic fuera del modal
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    };
+    
+    // Mostrar modal con animación
+    setTimeout(() => {
+        modal.style.transition = 'opacity 0.3s ease';
+        modal.style.opacity = '1';
+    }, 10);
 }
 
 // Auto-focus en búsqueda
@@ -373,6 +689,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (searchInput) {
         searchInput.focus();
     }
+    
+    // Mostrar mensajes de sesión si existen (para redirecciones desde crear/editar)
+    <?php if (isset($_SESSION['success_message'])): ?>
+    showNotification('<?php echo addslashes($_SESSION['success_message']); ?>', 'success');
+    <?php unset($_SESSION['success_message']); endif; ?>
+    
+    <?php if (isset($_SESSION['error_message'])): ?>
+    showNotification('<?php echo addslashes($_SESSION['error_message']); ?>', 'error', 6000);
+    <?php unset($_SESSION['error_message']); endif; ?>
 });
 </script>
 

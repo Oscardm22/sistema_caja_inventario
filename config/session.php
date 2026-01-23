@@ -9,12 +9,17 @@ if (session_status() === PHP_SESSION_NONE) {
 function base_url($path = '') {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
     $host = $_SERVER['HTTP_HOST'];
-    $script_name = dirname($_SERVER['SCRIPT_NAME']);
     
-    // Si estamos en la raíz, no agregar el directorio
-    $base = ($script_name === '/' || $script_name === '\\') ? '' : $script_name;
+    // Ruta base fija de tu proyecto
+    $base = '/sistema_caja_inventario';
     
-    return $protocol . $host . $base . '/' . ltrim($path, '/');
+    $url = $protocol . $host . $base . '/';
+    
+    if (!empty($path)) {
+        $url .= ltrim($path, '/');
+    }
+    
+    return $url;
 }
 
 // Verificar si el usuario está logueado

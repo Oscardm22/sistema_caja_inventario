@@ -78,5 +78,91 @@ class UsuariosModel {
         
         return $success;
     }
+
+    public function getUsuarioById($id) {
+        $query = "SELECT id, nombre, username, rol, estado, 
+                        pregunta_seguridad_1, respuesta_seguridad_1,
+                        pregunta_seguridad_2, respuesta_seguridad_2
+                FROM usuarios WHERE id = ?";
+        
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $usuario = $result->fetch_assoc();
+        $stmt->close();
+        
+        return $usuario;
+    }
+
+    public function usernameExiste($username, $excludeId = null) {
+        if ($excludeId) {
+            $query = "SELECT id FROM usuarios WHERE username = ? AND id != ?";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bind_param("si", $username, $excludeId);
+        } else {
+            $query = "SELECT id FROM usuarios WHERE username = ?";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bind_param("s", $username);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $existe = $result->num_rows > 0;
+        $stmt->close();
+        
+        return $existe;
+    }
+
+    public function countAdminsExcluding($excludeId) {
+        $query = "SELECT COUNT(*) as total FROM usuarios WHERE rol = 'admin' AND id != ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $excludeId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        return $result['total'];
+    }
+
+    public function actualizarUsuario($id, $data) {
+        $password_changed = !empty($data['password']);
+        
+        if ($password_changed) {
+            $hashed_password = password_hash($data['password'], PASSWORD_DEFAULT);
+            $query = "UPDATE usuarios SET 
+                    nombre = ?, username = ?, password = ?, rol = ?, estado = ?,
+                    pregunta_seguridad_1 = ?, respuesta_seguridad_1 = ?,
+                    pregunta_seguridad_2 = ?, respuesta_seguridad_2 = ?,
+                    fecha_actualizacion = CURRENT_TIMESTAMP
+                    WHERE id = ?";
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->bind_param("sssssssssi", 
+                $data['nombre'], $data['username'], $hashed_password, $data['rol'], $data['estado'],
+                $data['pregunta1'], $data['respuesta1'], $data['pregunta2'], $data['respuesta2'],
+                $id
+            );
+        } else {
+            $query = "UPDATE usuarios SET 
+                    nombre = ?, username = ?, rol = ?, estado = ?,
+                    pregunta_seguridad_1 = ?, respuesta_seguridad_1 = ?,
+                    pregunta_seguridad_2 = ?, respuesta_seguridad_2 = ?,
+                    fecha_actualizacion = CURRENT_TIMESTAMP
+                    WHERE id = ?";
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->bind_param("ssssssssi", 
+                $data['nombre'], $data['username'], $data['rol'], $data['estado'],
+                $data['pregunta1'], $data['respuesta1'], $data['pregunta2'], $data['respuesta2'],
+                $id
+            );
+        }
+        
+        $success = $stmt->execute();
+        $stmt->close();
+        
+        return $success;
+    }
 }
 ?>

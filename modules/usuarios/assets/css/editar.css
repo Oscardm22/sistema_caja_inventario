@@ -1,0 +1,44 @@
+/* Estilos específicos para edición de usuarios */
+
+/* Animaciones de validación */
+.field-error {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Estilos para botones de mostrar/ocultar */
+.password-toggle {
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: #4b5563 !important;
+}
+
+/* Estilos para mensajes de ayuda */
+.field-help {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+/* Estilos para estados de validación */
+.field-valid {
+    border-color: #10b981 !important;
+}
+
+.field-invalid {
+    border-color: #ef4444 !important;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

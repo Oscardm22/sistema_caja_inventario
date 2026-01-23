@@ -48,6 +48,5 @@ $status_filter = $data['filtros']['status'];
 <link rel="stylesheet" href="assets/css/usuarios.css">
 <script src="assets/js/notifications.js"></script>
 <script src="assets/js/usuarios_actions.js"></script>
-<script src="assets/js/main.js"></script>
 
 <?php require_once '../../includes/footer.php'; ?>

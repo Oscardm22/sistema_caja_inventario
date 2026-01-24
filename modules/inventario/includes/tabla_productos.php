@@ -1,6 +1,11 @@
 <?php
 // modules/inventario/includes/tabla_productos.php
+
+// Verificar la variable de sesión correctamente
+$usuario_rol = $_SESSION['rol'] ?? $_SESSION['user_role'] ?? 'cajero';
+$es_admin = ($usuario_rol === 'admin');
 ?>
+
 <div class="bg-white rounded-lg shadow overflow-hidden">
     <?php if (empty($productos)): ?>
         <div class="p-8 text-center text-gray-500">
@@ -88,15 +93,19 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
+                                <?php if ($es_admin): ?>
                                 <a href="editar.php?id=<?php echo $producto['id']; ?>" 
                                    class="text-blue-600 hover:text-blue-900">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <?php endif; ?>
+                                
                                 <button onclick="mostrarDetalleProducto(<?php echo $producto['id']; ?>)" 
                                         class="text-gray-600 hover:text-gray-900">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <?php if ($_SESSION['rol'] === 'admin'): ?>
+                                
+                                <?php if ($es_admin): ?>
                                 <button onclick="cambiarEstadoProducto(<?php echo $producto['id']; ?>, '<?php echo $producto['estado']; ?>')" 
                                         class="<?php echo ($producto['estado'] == 'activo') ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'; ?>">
                                     <i class="fas <?php echo ($producto['estado'] == 'activo') ? 'fa-pause' : 'fa-play'; ?>"></i>
@@ -131,3 +140,57 @@
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+// Funciones para productos
+function mostrarDetalleProducto(id) {
+    alert('Detalle del producto ID: ' + id + '\n\nEsta función estará disponible pronto.');
+}
+
+function cambiarEstadoProducto(id, estadoActual) {
+    if (!confirm('¿Estás seguro de cambiar el estado de este producto?')) {
+        return;
+    }
+    
+    const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
+    
+    fetch('acciones.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest' // ← Añade este header
+        },
+        body: `action=cambiar_estado&id=${id}&estado=${nuevoEstado}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar notificación y recargar
+            showNotification('success', data.message || 'Estado actualizado correctamente');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showNotification('error', data.error || 'No se pudo cambiar el estado');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'Error de conexión');
+    });
+}
+
+// Función auxiliar para mostrar notificaciones
+function showNotification(type, message) {
+    // Puedes usar tu sistema de notificaciones existente
+    // o esta simple implementación
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+</script>

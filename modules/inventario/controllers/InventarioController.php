@@ -196,5 +196,125 @@ class InventarioController {
         // Conversión directa: precio_usd * tasa_bcv
         return round($precio_usd * $tasa_bcv, 2);
     }
+
+    /**
+     * Muestra el formulario para editar un producto
+     */
+    public function editarAction($id) {
+        $model = new InventarioModel();
+        
+        // Obtener producto por ID
+        $producto = $model->getProductoById($id);
+        
+        if (!$producto) {
+            return false;
+        }
+        
+        // Obtener categorías
+        $categorias = $model->getCategorias();
+        
+        // Obtener tasa BCV
+        $tasa_bcv = $this->tasaCache->getTasa();
+        
+        return [
+            'producto' => $producto,
+            'categorias' => $categorias,
+            'tasa_bcv' => $tasa_bcv
+        ];
+    }
+
+    /**
+     * Procesa la edición de un producto
+     */
+    public function procesarEdicion() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return ['success' => false, 'error' => 'Método no permitido'];
+        }
+        
+        // Validar ID
+        $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+        
+        if ($id <= 0) {
+            return ['success' => false, 'error' => 'ID de producto inválido'];
+        }
+        
+        // Validar datos requeridos
+        $required_fields = ['codigo', 'nombre', 'precio_$', 'stock', 'stock_minimo', 'unidad_medida', 'estado'];
+        foreach ($required_fields as $field) {
+            if (empty($_POST[$field])) {
+                return ['success' => false, 'error' => "El campo " . str_replace('_', ' ', $field) . " es requerido"];
+            }
+        }
+        
+        // Preparar datos
+        $datos = [
+            'id' => $id,
+            'codigo' => trim($_POST['codigo']),
+            'nombre' => trim($_POST['nombre']),
+            'descripcion' => trim($_POST['descripcion'] ?? ''),
+            'precio_$' => (float)$_POST['precio_$'],
+            'stock' => (int)$_POST['stock'],
+            'stock_minimo' => (int)$_POST['stock_minimo'],
+            'categoria_id' => !empty($_POST['categoria_id']) ? (int)$_POST['categoria_id'] : null,
+            'unidad_medida' => $_POST['unidad_medida'],
+            'estado' => $_POST['estado']
+        ];
+        
+        // Manejar imagen
+        if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+            $imagen_info = $_FILES['imagen'];
+            
+            // Validar tipo de archivo
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!in_array($imagen_info['type'], $allowed_types)) {
+                return ['success' => false, 'error' => 'Solo se permiten imágenes JPG, PNG o GIF'];
+            }
+            
+            // Validar tamaño (máx 2MB)
+            if ($imagen_info['size'] > 2 * 1024 * 1024) {
+                return ['success' => false, 'error' => 'La imagen no debe superar los 2MB'];
+            }
+            
+            // Generar nombre único para la imagen
+            $extension = pathinfo($imagen_info['name'], PATHINFO_EXTENSION);
+            $nombre_imagen = 'producto_' . $id . '_' . time() . '.' . $extension;
+            $upload_dir = __DIR__ . '/../../uploads/products/';
+            
+            // Asegurar que el directorio existe
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            // Mover archivo
+            if (move_uploaded_file($imagen_info['tmp_name'], $upload_dir . $nombre_imagen)) {
+                $datos['imagen'] = $nombre_imagen;
+                
+                // Eliminar imagen anterior si no es default.jpg
+                $model = new InventarioModel();
+                $producto_actual = $model->getProductoById($id);
+                if ($producto_actual['imagen'] && $producto_actual['imagen'] != 'default.jpg') {
+                    $old_image_path = $upload_dir . $producto_actual['imagen'];
+                    if (file_exists($old_image_path)) {
+                        unlink($old_image_path);
+                    }
+                }
+            }
+        }
+        
+        // Actualizar producto
+        $model = new InventarioModel();
+        
+        // Validar que el código no exista en otro producto
+        if (!$model->codigoExiste($datos['codigo'], $id)) {
+            return ['success' => false, 'error' => 'El código ya está en uso por otro producto', 'data' => $datos];
+        }
+        
+        // Actualizar en la base de datos
+        if ($model->actualizarProducto($datos)) {
+            return ['success' => true, 'message' => 'Producto actualizado correctamente'];
+        } else {
+            return ['success' => false, 'error' => 'Error al actualizar el producto', 'data' => $datos];
+        }
+    }
 }
 ?>

@@ -245,5 +245,78 @@ class InventarioModel {
         // Más adelante implementaremos el sistema completo de movimientos
         return true;
     }
+
+    /**
+     * Actualiza un producto existente
+     */
+    public function actualizarProducto($datos) {
+        // Determinar si hay imagen nueva
+        if (isset($datos['imagen'])) {
+            $sql = "UPDATE productos SET 
+                    codigo = ?, 
+                    nombre = ?, 
+                    descripcion = ?, 
+                    precio_\$ = ?, 
+                    stock = ?, 
+                    stock_minimo = ?, 
+                    categoria_id = ?, 
+                    imagen = ?, 
+                    unidad_medida = ?, 
+                    estado = ?
+                    WHERE id = ?";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param(
+                "sssdiiisssi",
+                $datos['codigo'],
+                $datos['nombre'],
+                $datos['descripcion'],
+                $datos['precio_$'],
+                $datos['stock'],
+                $datos['stock_minimo'],
+                $datos['categoria_id'],
+                $datos['imagen'],
+                $datos['unidad_medida'],
+                $datos['estado'],
+                $datos['id']
+            );
+        } else {
+            $sql = "UPDATE productos SET 
+                    codigo = ?, 
+                    nombre = ?, 
+                    descripcion = ?, 
+                    precio_\$ = ?, 
+                    stock = ?, 
+                    stock_minimo = ?, 
+                    categoria_id = ?, 
+                    unidad_medida = ?, 
+                    estado = ?
+                    WHERE id = ?";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param(
+                "sssdiiissi",
+                $datos['codigo'],
+                $datos['nombre'],
+                $datos['descripcion'],
+                $datos['precio_$'],
+                $datos['stock'],
+                $datos['stock_minimo'],
+                $datos['categoria_id'],
+                $datos['unidad_medida'],
+                $datos['estado'],
+                $datos['id']
+            );
+        }
+        
+        if ($stmt->execute()) {
+            $stmt->close();
+            return true;
+        } else {
+            error_log("Error al actualizar producto: " . $stmt->error);
+            $stmt->close();
+            return false;
+        }
+    }
 }
 ?>

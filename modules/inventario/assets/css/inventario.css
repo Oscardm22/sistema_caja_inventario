@@ -1,0 +1,19 @@
+/* modules/inventario/assets/css/inventario.css */
+.stock-bajo {
+    background-color: #fef3c7;
+    border-left: 4px solid #f59e0b;
+}
+
+.stock-critico {
+    background-color: #fee2e2;
+    border-left: 4px solid #ef4444;
+}
+
+.tasa-bcv-widget {
+    transition: all 0.3s ease;
+}
+
+.tasa-bcv-widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}

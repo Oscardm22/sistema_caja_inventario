@@ -4,7 +4,7 @@
 class TasaBCVCache {
     private $db;
     private $cache_time = 3600; // 1 hora en segundos
-    private $api_url = 'https://api.dolarvzla.com/public/exchange-rate';
+    private $api_url = 'https://ve.dolarapi.com/v1/dolares/oficial';
     
     public function __construct() {
         $database = Database::getInstance();
@@ -16,20 +16,22 @@ class TasaBCVCache {
      */
     public function getTasa() {
         // Primero intentar obtener del cache
-        $cached_rate = $this->getFromCache();
+        $cached_rate = $this->getLatestCache();
         
         if ($cached_rate && !$this->isCacheExpired($cached_rate)) {
+            error_log("Usando tasa desde cache: " . $cached_rate['tasa_usd']);
             return (float) $cached_rate['tasa_usd'];
         }
         
         // Si el cache está expirado o no existe, obtener de la API
-        return $this->fetchFromAPI();
+        error_log("Cache expirado o no existe, obteniendo desde API...");
+        return $this->fetchAndUpdateAPI();
     }
     
     /**
-     * Obtiene la tasa desde el cache de la base de datos
+     * Obtiene el último registro del cache
      */
-    private function getFromCache() {
+    private function getLatestCache() {
         $sql = "SELECT * FROM tasa_bcv_cache 
                 ORDER BY fecha_consulta DESC 
                 LIMIT 1";
@@ -59,46 +61,21 @@ class TasaBCVCache {
     }
     
     /**
-     * Obtiene la tasa desde la API externa
+     * Obtiene la tasa desde la API y actualiza el cache existente
      */
-    private function fetchFromAPI() {
+    private function fetchAndUpdateAPI() {
         try {
-            // Usar cURL para llamar a la API
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $this->api_url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $tasa_usd = $this->fetchTasaFromAPI();
             
-            $response = curl_exec($ch);
-            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            
-            if (curl_errno($ch)) {
-                error_log("cURL Error: " . curl_error($ch));
-                curl_close($ch);
+            if ($tasa_usd === null || $tasa_usd <= 0) {
+                error_log("API devolvió tasa inválida, usando fallback");
                 return $this->getFallbackRate();
             }
             
-            curl_close($ch);
+            // Actualizar o crear registro en cache
+            $this->updateOrCreateCache($tasa_usd);
             
-            if ($http_code !== 200) {
-                error_log("API responded with code: " . $http_code);
-                return $this->getFallbackRate();
-            }
-            
-            $data = json_decode($response, true);
-            
-            if (!$data || !isset($data['current']['usd'])) {
-                error_log("Invalid API response format");
-                return $this->getFallbackRate();
-            }
-            
-            $tasa_usd = (float) $data['current']['usd'];
-            $tasa_eur = isset($data['current']['eur']) ? (float) $data['current']['eur'] : null;
-            $fecha_actualizacion = isset($data['current']['date']) ? $data['current']['date'] : date('Y-m-d');
-            
-            // Guardar en cache
-            $this->saveToCache($tasa_usd, $tasa_eur, $fecha_actualizacion);
+            error_log("Tasa actualizada desde API: " . $tasa_usd . " Bs/USD");
             
             return $tasa_usd;
             
@@ -109,46 +86,147 @@ class TasaBCVCache {
     }
     
     /**
-     * Guarda la tasa en el cache
+     * Obtiene la tasa desde la API externa
      */
-    private function saveToCache($tasa_usd, $tasa_eur, $fecha_actualizacion) {
-        // Si tasa_eur es null, usar un valor por defecto
-        if ($tasa_eur === null) {
-            $tasa_eur = 0.0;
+    private function fetchTasaFromAPI() {
+        $ch = curl_init();
+        
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->api_url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'User-Agent: Mozilla/5.0 (compatible; InventarioApp/1.0)'
+            ]
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+        if (curl_errno($ch)) {
+            $error_msg = curl_error($ch);
+            curl_close($ch);
+            throw new Exception("cURL Error: " . $error_msg);
         }
         
-        $sql = "INSERT INTO tasa_bcv_cache 
-                (tasa_usd, tasa_eur, fecha_consulta, fecha_actualizacion, fuente) 
-                VALUES (?, ?, NOW(), ?, ?)";
+        curl_close($ch);
         
-        try {
+        if ($http_code !== 200) {
+            throw new Exception("API responded with code: " . $http_code);
+        }
+        
+        $data = json_decode($response, true);
+        
+        if (!$data) {
+            throw new Exception("Invalid API response format");
+        }
+        
+        return $this->parseAPIResponse($data);
+    }
+    
+    /**
+     * Parsea la respuesta de la API
+     */
+    private function parseAPIResponse($data) {
+        // Usar el promedio si está disponible
+        if (isset($data['promedio']) && $data['promedio'] > 0) {
+            return (float) $data['promedio'];
+        }
+        
+        // Si no hay promedio, usar un cálculo entre compra y venta
+        if (isset($data['compra']) && isset($data['venta']) && 
+            $data['compra'] > 0 && $data['venta'] > 0) {
+            return (float) (($data['compra'] + $data['venta']) / 2);
+        }
+        
+        // Si solo hay venta
+        if (isset($data['venta']) && $data['venta'] > 0) {
+            return (float) $data['venta'];
+        }
+        
+        // Si solo hay compra
+        if (isset($data['compra']) && $data['compra'] > 0) {
+            return (float) $data['compra'];
+        }
+        
+        throw new Exception("No valid rate found in API response");
+    }
+    
+    /**
+     * Actualiza el registro existente o crea uno nuevo si no existe
+     */
+    private function updateOrCreateCache($tasa_usd) {
+        // Primero verificar si existe un registro para hoy
+        $sql_check = "SELECT id FROM tasa_bcv_cache 
+                     WHERE DATE(fecha_actualizacion) = CURDATE() 
+                     LIMIT 1";
+        
+        $result = $this->db->query($sql_check);
+        
+        if ($result && $result->num_rows > 0) {
+            // Actualizar registro existente
+            $sql = "UPDATE tasa_bcv_cache 
+                    SET tasa_usd = ?, 
+                        fecha_consulta = NOW(),
+                        fuente = ?
+                    WHERE DATE(fecha_actualizacion) = CURDATE()";
+            
             $stmt = $this->db->prepare($sql);
+            $fuente = 've.dolarapi.com';
+            $stmt->bind_param("ds", $tasa_usd, $fuente);
             
-            // Manejar correctamente los parámetros
-            $fecha_full = $fecha_actualizacion . ' 00:00:00';
-            $fuente = 'api.dolarvzla.com';
-            
-            $stmt->bind_param("ddss", $tasa_usd, $tasa_eur, $fecha_full, $fuente);
-            $stmt->execute();
+            if ($stmt->execute()) {
+                error_log("Registro actualizado en cache para hoy");
+            } else {
+                error_log("Error al actualizar cache: " . $stmt->error);
+            }
             $stmt->close();
             
-            // Limpiar cache viejo (más de 7 días)
-            $this->cleanOldCache();
+        } else {
+            // Crear nuevo registro para hoy
+            $sql = "INSERT INTO tasa_bcv_cache 
+                    (tasa_usd, tasa_eur, fecha_consulta, fecha_actualizacion, fuente) 
+                    VALUES (?, ?, NOW(), CURDATE(), ?)";
             
-        } catch (Exception $e) {
-            error_log("Error saving to cache: " . $e->getMessage());
+            $stmt = $this->db->prepare($sql);
+            
+            $tasa_eur = 0.0;
+            $fuente = 've.dolarapi.com';
+            
+            $stmt->bind_param("dds", $tasa_usd, $tasa_eur, $fuente);
+            
+            if ($stmt->execute()) {
+                error_log("Nuevo registro creado en cache para hoy");
+            } else {
+                error_log("Error al crear cache: " . $stmt->error);
+            }
+            $stmt->close();
         }
+        
+        // Limpiar registros antiguos (más de 30 días)
+        $this->cleanOldCache(30);
     }
     
     /**
      * Limpia cache antiguo
      */
-    private function cleanOldCache() {
+    private function cleanOldCache($days = 30) {
         $sql = "DELETE FROM tasa_bcv_cache 
-                WHERE fecha_consulta < DATE_SUB(NOW(), INTERVAL 7 DAY)";
+                WHERE fecha_actualizacion < DATE_SUB(CURDATE(), INTERVAL ? DAY)";
         
         try {
-            $this->db->query($sql);
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("i", $days);
+            $stmt->execute();
+            
+            if ($stmt->affected_rows > 0) {
+                error_log("Registros antiguos eliminados: " . $stmt->affected_rows);
+            }
+            
+            $stmt->close();
         } catch (Exception $e) {
             error_log("Error cleaning old cache: " . $e->getMessage());
         }
@@ -158,29 +236,53 @@ class TasaBCVCache {
      * Tasa de respaldo si la API falla
      */
     private function getFallbackRate() {
-        $last_rate = $this->getFromCache();
+        $last_rate = $this->getLatestCache();
         if ($last_rate) {
+            error_log("Usando tasa de cache como fallback: " . $last_rate['tasa_usd']);
             return (float) $last_rate['tasa_usd'];
         }
         
         // Si no hay nada en cache, usar tasa por defecto
-        return 355.55;
+        $fallback_rate = 36.50;
+        error_log("Usando tasa por defecto como fallback: " . $fallback_rate);
+        return $fallback_rate;
     }
     
     /**
      * Fuerza la actualización de la tasa
      */
     public function forceUpdate() {
-        return $this->fetchFromAPI();
+        try {
+            $tasa_usd = $this->fetchTasaFromAPI();
+            
+            if ($tasa_usd === null || $tasa_usd <= 0) {
+                throw new Exception("API devolvió tasa inválida");
+            }
+            
+            // Actualizar o crear registro
+            $this->updateOrCreateCache($tasa_usd);
+            
+            return $tasa_usd;
+            
+        } catch (Exception $e) {
+            error_log("Error en forceUpdate: " . $e->getMessage());
+            return $this->getFallbackRate();
+        }
     }
     
     /**
-     * Obtiene el historial de tasas (últimos 30 días)
+     * Obtiene el historial de tasas (solo un registro por día)
      */
     public function getHistory($days = 30) {
-        $sql = "SELECT * FROM tasa_bcv_cache 
-                WHERE fecha_consulta >= DATE_SUB(NOW(), INTERVAL ? DAY)
-                ORDER BY fecha_consulta DESC";
+        $sql = "SELECT 
+                    DATE(fecha_actualizacion) as fecha,
+                    AVG(tasa_usd) as tasa_usd,
+                    MAX(fuente) as fuente,
+                    MAX(fecha_consulta) as ultima_consulta
+                FROM tasa_bcv_cache 
+                WHERE fecha_actualizacion >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                GROUP BY DATE(fecha_actualizacion)
+                ORDER BY fecha DESC";
         
         try {
             $stmt = $this->db->prepare($sql);
@@ -198,6 +300,26 @@ class TasaBCVCache {
             
         } catch (Exception $e) {
             error_log("Error getting history: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Obtiene estadísticas del cache
+     */
+    public function getCacheStats() {
+        $sql = "SELECT 
+                    COUNT(*) as total_registros,
+                    MIN(fecha_actualizacion) as fecha_mas_antigua,
+                    MAX(fecha_actualizacion) as fecha_mas_reciente,
+                    COUNT(DISTINCT DATE(fecha_actualizacion)) as dias_con_registro
+                FROM tasa_bcv_cache";
+        
+        try {
+            $result = $this->db->query($sql);
+            return $result->fetch_assoc();
+        } catch (Exception $e) {
+            error_log("Error getting cache stats: " . $e->getMessage());
             return [];
         }
     }

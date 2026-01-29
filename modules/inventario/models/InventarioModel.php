@@ -318,5 +318,141 @@ class InventarioModel {
             return false;
         }
     }
+
+    /**
+     * Crea una nueva categoría
+     */
+    public function crearCategoria($nombre, $descripcion = '', $estado = 'activa') {
+        $sql = "INSERT INTO categorias (nombre, descripcion, estado) VALUES (?, ?, ?)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("sss", $nombre, $descripcion, $estado);
+        
+        if ($stmt->execute()) {
+            $categoria_id = $stmt->insert_id;
+            $stmt->close();
+            return $categoria_id;
+        } else {
+            error_log("Error al crear categoría: " . $stmt->error);
+            $stmt->close();
+            return false;
+        }
+    }
+
+    /**
+     * Actualiza una categoría existente
+     */
+    public function actualizarCategoria($id, $nombre, $descripcion = '', $estado = 'activa') {
+        $sql = "UPDATE categorias SET nombre = ?, descripcion = ?, estado = ? WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("sssi", $nombre, $descripcion, $estado, $id);
+        
+        if ($stmt->execute()) {
+            $stmt->close();
+            return true;
+        } else {
+            error_log("Error al actualizar categoría: " . $stmt->error);
+            $stmt->close();
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene una categoría por ID
+     */
+    public function getCategoriaById($id) {
+        $sql = "SELECT * FROM categorias WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            $stmt->close();
+            return $row;
+        }
+        
+        $stmt->close();
+        return null;
+    }
+
+    /**
+     * Verifica si una categoría existe por nombre
+     */
+    public function categoriaExiste($nombre, $excluir_id = null) {
+    $sql = "SELECT id FROM categorias WHERE nombre = ?";
+    
+    if ($excluir_id) {
+        $sql .= " AND id != ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("si", $nombre, $excluir_id);
+    } else {
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("s", $nombre);
+    }
+    
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $existe = $result->num_rows > 0;
+    $stmt->close();
+    
+    return $existe; // Cambié esto: devuelve true si EXISTE
+}
+
+    /**
+     * Cambia el estado de una categoría
+     */
+    public function cambiarEstadoCategoria($id, $nuevo_estado) {
+        $sql = "UPDATE categorias SET estado = ? WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("si", $nuevo_estado, $id);
+        
+        if ($stmt->execute()) {
+            $stmt->close();
+            return true;
+        } else {
+            error_log("Error al cambiar estado de categoría: " . $stmt->error);
+            $stmt->close();
+            return false;
+        }
+    }
+
+    /**
+     * Elimina una categoría
+     */
+    public function eliminarCategoria($id) {
+        $sql = "DELETE FROM categorias WHERE id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $id);
+        
+        if ($stmt->execute()) {
+            $stmt->close();
+            return true;
+        } else {
+            error_log("Error al eliminar categoría: " . $stmt->error);
+            $stmt->close();
+            return false;
+        }
+    }
+
+    /**
+     * Cuenta productos por categoría
+     */
+    public function contarProductosPorCategoria($categoria_id) {
+        $sql = "SELECT COUNT(*) as total FROM productos WHERE categoria_id = ? AND estado = 'activo'";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $categoria_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        
+        return $row['total'] ?? 0;
+    }
 }
 ?>

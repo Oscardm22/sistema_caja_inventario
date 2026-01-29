@@ -43,6 +43,9 @@ $tasa_bcv = $data['tasa_bcv'] ?? 0;
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
+                <a href="categorias.php" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-tags mr-2"></i>Categorías
+                </a>
                 <a href="crear.php" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                     <i class="fas fa-plus mr-2"></i>Nuevo Producto
                 </a>

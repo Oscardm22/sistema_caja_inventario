@@ -66,7 +66,7 @@ class InventarioModel {
     }
     
     public function getCategorias() {
-        $sql = "SELECT * FROM categorias WHERE estado = 'activa' ORDER BY nombre ASC";
+        $sql = "SELECT * FROM categorias ORDER BY nombre ASC";
         $result = $this->db->query($sql);
         
         $categorias = [];

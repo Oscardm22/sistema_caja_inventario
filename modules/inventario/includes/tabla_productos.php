@@ -18,7 +18,6 @@ $es_admin = ($usuario_rol === 'admin');
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <!-- COLUMNA DE IMAGEN AGREGADA -->
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Imagen
                         </th>
@@ -144,26 +143,6 @@ $es_admin = ($usuario_rol === 'admin');
                     <?php endforeach; ?>
                 </tbody>
             </table>
-        </div>
-        
-        <!-- Paginación (simple por ahora) -->
-        <div class="px-6 py-4 border-t border-gray-200">
-            <div class="flex justify-between items-center">
-                <div class="text-sm text-gray-700">
-                    Mostrando <span class="font-medium"><?php echo count($productos); ?></span> productos
-                </div>
-                <div class="flex space-x-2">
-                    <button class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                        Anterior
-                    </button>
-                    <button class="px-3 py-1 border border-gray-300 rounded text-sm bg-blue-50 text-blue-600 border-blue-300">
-                        1
-                    </button>
-                    <button class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                        Siguiente
-                    </button>
-                </div>
-            </div>
         </div>
     <?php endif; ?>
 </div>

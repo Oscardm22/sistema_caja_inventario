@@ -18,10 +18,17 @@ $data = $controller->indexAction();
 $productos = $data['productos'] ?? [];
 $stats = $data['estadisticas'] ?? [];
 $categorias = $data['categorias'] ?? [];
-$search = $data['filtros']['search'] ?? '';
-$categoria_filter = $data['filtros']['categoria'] ?? '';
-$estado_filter = $data['filtros']['estado'] ?? 'activo';
+$filtros = $data['filtros'] ?? [];
+$paginacion = $data['paginacion'] ?? [];
 $tasa_bcv = $data['tasa_bcv'] ?? 0;
+
+// Variables para filtros (para mantenerlas en el formulario)
+$search = $filtros['search'] ?? '';
+$categoria_filter = $filtros['categoria'] ?? '';
+$estado_filter = $filtros['estado'] ?? 'activo';
+$pagina_actual = $paginacion['pagina_actual'] ?? 1;
+$total_paginas = $paginacion['total_paginas'] ?? 1;
+$total_productos = $paginacion['total_productos'] ?? 0;
 ?>
 
 <!-- Contenedor principal -->
@@ -38,7 +45,7 @@ $tasa_bcv = $data['tasa_bcv'] ?? 0;
                 <!-- Widget de tasa BCV simplificado -->
                 <div class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg border border-yellow-300">
                     <span class="font-semibold">Tasa BCV:</span>
-                    <span class="font-bold">Bs. <?php echo number_format($tasa_bcv, 2, ',', '.'); ?></span>
+                    <span class="font-bold" id="tasa-bcv-display">Bs. <?php echo number_format($tasa_bcv, 2, ',', '.'); ?></span>
                     <button onclick="actualizarTasaBCV()" class="ml-2 text-yellow-600 hover:text-yellow-800">
                         <i class="fas fa-sync-alt"></i>
                     </button>
@@ -72,6 +79,59 @@ $tasa_bcv = $data['tasa_bcv'] ?? 0;
             echo '<p class="text-gray-500">No hay productos para mostrar.</p>';
             echo '</div>';
         }
+        
+        // Componente de paginación
+        if (!empty($productos) && file_exists($includes_dir . 'paginacion.php')) {
+            require_once $includes_dir . 'paginacion.php';
+        } else if (!empty($productos)) {
+            // Paginación simple por defecto si no existe el componente
+            ?>
+            <div class="bg-white px-6 py-4 border-t border-gray-200 rounded-b-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="text-sm text-gray-700">
+                        Mostrando <span class="font-medium"><?php echo $paginacion['inicio'] ?? 1; ?></span>
+                        a <span class="font-medium"><?php echo $paginacion['fin'] ?? count($productos); ?></span>
+                        de <span class="font-medium"><?php echo $total_productos; ?></span>
+                        productos
+                    </div>
+                    
+                    <?php if ($total_paginas > 1): ?>
+                    <div class="flex space-x-2">
+                        <!-- Botón Anterior -->
+                        <?php if ($pagina_actual > 1): ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $pagina_actual - 1])); ?>" 
+                           class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-chevron-left mr-1"></i> Anterior
+                        </a>
+                        <?php endif; ?>
+                        
+                        <!-- Números de página (simplificado) -->
+                        <div class="flex space-x-1">
+                            <?php for ($i = 1; $i <= $total_paginas; $i++): 
+                                $clase = ($i == $pagina_actual) 
+                                    ? 'px-3 py-1 border border-blue-300 rounded text-sm bg-blue-50 text-blue-600 font-medium' 
+                                    : 'px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors';
+                            ?>
+                            <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $i])); ?>" 
+                               class="<?php echo $clase; ?>">
+                                <?php echo $i; ?>
+                            </a>
+                            <?php endfor; ?>
+                        </div>
+                        
+                        <!-- Botón Siguiente -->
+                        <?php if ($pagina_actual < $total_paginas): ?>
+                        <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $pagina_actual + 1])); ?>" 
+                           class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors">
+                            Siguiente <i class="fas fa-chevron-right ml-1"></i>
+                        </a>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php
+        }
         ?>
         
     </main>
@@ -94,10 +154,9 @@ function actualizarTasaBCV() {
             
             if (data.success) {
                 // Actualizar el display de tasa
-                const tasaDisplay = document.querySelector('.font-bold span') || 
-                                   document.getElementById('tasa-bcv-display');
+                const tasaDisplay = document.getElementById('tasa-bcv-display');
                 if (tasaDisplay) {
-                    tasaDisplay.textContent = data.tasa_formatted;
+                    tasaDisplay.textContent = 'Bs. ' + data.tasa_formatted;
                 }
                 
                 // Mostrar notificación
@@ -113,6 +172,25 @@ function actualizarTasaBCV() {
             console.error('Error:', error);
         });
 }
+
+// Función para mantener los filtros al cambiar de página
+document.addEventListener('DOMContentLoaded', function() {
+    // Si hay un formulario de filtros, asegurar que resetee a página 1
+    const filterForm = document.querySelector('form[method="GET"]');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function() {
+            // Crear o actualizar un campo hidden para página=1
+            let paginaInput = document.querySelector('input[name="pagina"]');
+            if (!paginaInput) {
+                paginaInput = document.createElement('input');
+                paginaInput.type = 'hidden';
+                paginaInput.name = 'pagina';
+                filterForm.appendChild(paginaInput);
+            }
+            paginaInput.value = '1';
+        });
+    }
+});
 </script>
 
 <?php require_once '../../includes/footer.php'; ?>

@@ -9,7 +9,11 @@ class InventarioModel {
         $this->db = $database->getConnection();
     }
     
-    public function getProductos($filtros = []) {
+    /**
+     * Versión modificada de getProductos que acepta paginación
+     * Mantiene compatibilidad con el código existente
+     */
+    public function getProductos($filtros = [], $offset = null, $limite = null) {
         $sql = "SELECT p.*, c.nombre as categoria_nombre 
                 FROM productos p 
                 LEFT JOIN categorias c ON p.categoria_id = c.id 
@@ -46,9 +50,17 @@ class InventarioModel {
         
         $sql .= " ORDER BY p.nombre ASC";
         
+        // Agregar LIMIT y OFFSET si se proporcionan
+        if ($offset !== null && $limite !== null) {
+            $sql .= " LIMIT ? OFFSET ?";
+            $params[] = $limite;
+            $params[] = $offset;
+            $types .= "ii";
+        }
+        
         $stmt = $this->db->prepare($sql);
         
-        if ($params) {
+        if (!empty($params)) {
             // Manejar los parámetros correctamente
             $stmt->bind_param($types, ...$params);
         }
@@ -63,6 +75,57 @@ class InventarioModel {
         
         $stmt->close();
         return $productos;
+    }
+    
+    /**
+     * NUEVO: Cuenta el total de productos según filtros
+     */
+    public function contarProductos($filtros = []) {
+        $sql = "SELECT COUNT(*) as total 
+                FROM productos p 
+                WHERE 1=1";
+        
+        $conditions = [];
+        $params = [];
+        $types = "";
+        
+        if (!empty($filtros['search'])) {
+            $conditions[] = "(p.nombre LIKE ? OR p.codigo LIKE ? OR p.descripcion LIKE ?)";
+            $search_term = "%{$filtros['search']}%";
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $types .= "sss";
+        }
+        
+        if (!empty($filtros['categoria'])) {
+            $conditions[] = "p.categoria_id = ?";
+            $params[] = $filtros['categoria'];
+            $types .= "i";
+        }
+        
+        if (!empty($filtros['estado'])) {
+            $conditions[] = "p.estado = ?";
+            $params[] = $filtros['estado'];
+            $types .= "s";
+        }
+        
+        if (!empty($conditions)) {
+            $sql .= " AND " . implode(" AND ", $conditions);
+        }
+        
+        $stmt = $this->db->prepare($sql);
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        
+        return $row['total'] ?? 0;
     }
     
     public function getCategorias() {
@@ -382,24 +445,24 @@ class InventarioModel {
      * Verifica si una categoría existe por nombre
      */
     public function categoriaExiste($nombre, $excluir_id = null) {
-    $sql = "SELECT id FROM categorias WHERE nombre = ?";
-    
-    if ($excluir_id) {
-        $sql .= " AND id != ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("si", $nombre, $excluir_id);
-    } else {
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("s", $nombre);
+        $sql = "SELECT id FROM categorias WHERE nombre = ?";
+        
+        if ($excluir_id) {
+            $sql .= " AND id != ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("si", $nombre, $excluir_id);
+        } else {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("s", $nombre);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $existe = $result->num_rows > 0;
+        $stmt->close();
+        
+        return $existe; // Devuelve true si EXISTE
     }
-    
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $existe = $result->num_rows > 0;
-    $stmt->close();
-    
-    return $existe; // Cambié esto: devuelve true si EXISTE
-}
 
     /**
      * Cambia el estado de una categoría

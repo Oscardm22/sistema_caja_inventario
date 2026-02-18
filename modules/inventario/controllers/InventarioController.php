@@ -18,11 +18,28 @@ class InventarioController {
         $filtros = [
             'search' => $_GET['search'] ?? '',
             'categoria' => $_GET['categoria'] ?? '',
-            'estado' => $_GET['estado'] ?? 'activo'
+            'estado' => $_GET['estado'] ?? 'activo',
+            // Nuevos parámetros de paginación
+            'pagina' => isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1,
+            'por_pagina' => 10 // Productos por página
         ];
         
-        // Obtener datos
-        $productos = $this->model->getProductos($filtros);
+        // Asegurar que la página sea al menos 1
+        if ($filtros['pagina'] < 1) $filtros['pagina'] = 1;
+        
+        // Calcular offset para la consulta
+        $offset = ($filtros['pagina'] - 1) * $filtros['por_pagina'];
+        
+        // Obtener productos paginados
+        $productos = $this->model->getProductos($filtros, $offset, $filtros['por_pagina']);
+        
+        // Obtener total de productos para paginación
+        $total_productos = $this->model->contarProductos($filtros);
+        
+        // Calcular total de páginas
+        $total_paginas = ceil($total_productos / $filtros['por_pagina']);
+        
+        // Obtener otros datos
         $categorias = $this->model->getCategorias();
         $stats = $this->model->getEstadisticas();
         
@@ -37,12 +54,24 @@ class InventarioController {
             );
         }
         
+        // Calcular información de paginación
+        $inicio = $offset + 1;
+        $fin = min($offset + $filtros['por_pagina'], $total_productos);
+        
         return [
             'productos' => $productos,
             'categorias' => $categorias,
             'estadisticas' => $stats,
             'filtros' => $filtros,
-            'tasa_bcv' => $tasa_bcv
+            'tasa_bcv' => $tasa_bcv,
+            'paginacion' => [
+                'pagina_actual' => $filtros['pagina'],
+                'total_paginas' => $total_paginas,
+                'total_productos' => $total_productos,
+                'por_pagina' => $filtros['por_pagina'],
+                'inicio' => $inicio,
+                'fin' => $fin
+            ]
         ];
     }
     

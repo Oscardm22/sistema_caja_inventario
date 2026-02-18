@@ -150,7 +150,12 @@ foreach ($categorias as $cat) {
                                                 class="text-blue-600 hover:text-blue-900">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button onclick="cambiarEstadoCategoria(<?php echo $categoria['id']; ?>, '<?php echo $categoria['estado']; ?>')" 
+                                        <button onclick="abrirModalCambiarEstado(
+                                            <?php echo $categoria['id']; ?>, 
+                                            '<?php echo $categoria['estado']; ?>',
+                                            '<?php echo htmlspecialchars($categoria['nombre']); ?>',
+                                            <?php echo $productos_count; ?>
+                                        )" 
                                                 class="<?php echo ($categoria['estado'] == 'activa') ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'; ?>">
                                             <i class="fas <?php echo ($categoria['estado'] == 'activa') ? 'fa-pause' : 'fa-play'; ?>"></i>
                                         </button>
@@ -235,6 +240,72 @@ foreach ($categorias as $cat) {
     </div>
 </div>
 
+<!-- Modal para cambiar estado de categoría -->
+<div id="modal-cambiar-estado" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold" id="modal-estado-titulo">Cambiar Estado de Categoría</h3>
+            <button onclick="cerrarModalEstado()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="text-center py-4">
+            <!-- Icono dinámico según el estado -->
+            <div id="estado-icono-container" class="mb-4">
+                <i id="estado-icono" class="fas fa-pause-circle text-6xl text-yellow-500"></i>
+            </div>
+            
+            <p class="text-lg mb-2" id="modal-estado-mensaje">¿Estás seguro de cambiar el estado de esta categoría?</p>
+            <p class="text-sm text-gray-600 mb-2">
+                <span id="categoria-nombre-modal" class="font-semibold"></span>
+            </p>
+            <p class="text-xs text-gray-500" id="estado-actual-info"></p>
+            
+            <!-- Estado actual y nuevo estado -->
+            <div class="flex justify-center items-center space-x-4 my-4">
+                <div class="text-center">
+                    <span class="text-xs text-gray-500">Estado Actual</span>
+                    <div id="estado-actual-badge" class="px-3 py-1 rounded-full text-sm font-medium mt-1">
+                        <!-- Se llenará con JS -->
+                    </div>
+                </div>
+                <i class="fas fa-arrow-right text-gray-400"></i>
+                <div class="text-center">
+                    <span class="text-xs text-gray-500">Nuevo Estado</span>
+                    <div id="estado-nuevo-badge" class="px-3 py-1 rounded-full text-sm font-medium mt-1">
+                        <!-- Se llenará con JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Advertencia si tiene productos -->
+            <div id="productos-advertencia" class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                <span class="text-sm text-yellow-700" id="productos-mensaje"></span>
+            </div>
+        </div>
+        
+        <form id="form-cambiar-estado" class="space-y-4">
+            <input type="hidden" id="estado-categoria-id" name="id" value="">
+            <input type="hidden" id="estado-categoria-nuevo" name="estado" value="">
+            
+            <div class="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" 
+                        onclick="cerrarModalEstado()" 
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" 
+                        id="btn-confirmar-cambio"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-check mr-2"></i>Confirmar Cambio
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- JavaScript para categorías -->
 <script src="assets/js/categorias.js"></script>
 <script>
@@ -247,7 +318,6 @@ function abrirModalCrear() {
 }
 
 function abrirModalEditar(id) {
-    // Cargar datos de la categoría
     fetch(`acciones_categorias.php?action=obtener&id=${id}`)
         .then(response => response.json())
         .then(data => {
@@ -268,8 +338,113 @@ function abrirModalEditar(id) {
         });
 }
 
-function cerrarModal() {
-    document.getElementById('modal-categoria').classList.add('hidden');
+// 🆕 NUEVA FUNCIÓN: Abrir modal para cambiar estado
+function abrirModalCambiarEstado(id, estadoActual, nombreCategoria, tieneProductos = false) {
+    const nuevoEstado = estadoActual === 'activa' ? 'inactiva' : 'activa';
+    
+    // Guardar datos en el modal
+    document.getElementById('estado-categoria-id').value = id;
+    document.getElementById('estado-categoria-nuevo').value = nuevoEstado;
+    document.getElementById('categoria-nombre-modal').textContent = nombreCategoria;
+    
+    // Configurar icono y mensajes según el cambio
+    const icono = document.getElementById('estado-icono');
+    const mensaje = document.getElementById('modal-estado-mensaje');
+    const estadoActualBadge = document.getElementById('estado-actual-badge');
+    const estadoNuevoBadge = document.getElementById('estado-nuevo-badge');
+    
+    if (nuevoEstado === 'inactiva') {
+        // Activando → Inactivando
+        icono.className = 'fas fa-pause-circle text-6xl text-yellow-500';
+        mensaje.textContent = '¿Estás seguro de desactivar esta categoría?';
+        estadoActualBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+        estadoActualBadge.textContent = 'Activa';
+        estadoNuevoBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+        estadoNuevoBadge.textContent = 'Inactiva';
+    } else {
+        // Inactivando → Activando
+        icono.className = 'fas fa-play-circle text-6xl text-green-500';
+        mensaje.textContent = '¿Estás seguro de activar esta categoría?';
+        estadoActualBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+        estadoActualBadge.textContent = 'Inactiva';
+        estadoNuevoBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+        estadoNuevoBadge.textContent = 'Activa';
+    }
+    
+    // Mostrar advertencia si tiene productos (solo cuando se va a desactivar)
+    const advertenciaDiv = document.getElementById('productos-advertencia');
+    if (tieneProductos && nuevoEstado === 'inactiva') {
+        advertenciaDiv.classList.remove('hidden');
+        document.getElementById('productos-mensaje').textContent = 
+            `Esta categoría tiene ${tieneProductos} producto(s) asociado(s). Al desactivarla, los productos no se eliminarán pero quedarán en una categoría inactiva.`;
+    } else {
+        advertenciaDiv.classList.add('hidden');
+    }
+    
+    // Mostrar modal
+    document.getElementById('modal-cambiar-estado').classList.remove('hidden');
+}
+
+// 🆕 NUEVA FUNCIÓN: Cerrar modal de estado
+function cerrarModalEstado() {
+    document.getElementById('modal-cambiar-estado').classList.add('hidden');
+}
+
+// 🆕 NUEVA FUNCIÓN: Configurar el formulario de cambio de estado
+document.addEventListener('DOMContentLoaded', function() {
+    const formCambiarEstado = document.getElementById('form-cambiar-estado');
+    if (formCambiarEstado) {
+        formCambiarEstado.addEventListener('submit', function(e) {
+            e.preventDefault();
+            cambiarEstadoCategoriaModal();
+        });
+    }
+});
+
+// 🆕 NUEVA FUNCIÓN: Cambiar estado desde el modal
+function cambiarEstadoCategoriaModal() {
+    const id = document.getElementById('estado-categoria-id').value;
+    const nuevoEstado = document.getElementById('estado-categoria-nuevo').value;
+    
+    const formData = new FormData();
+    formData.append('action', 'cambiar_estado');
+    formData.append('id', id);
+    formData.append('estado', nuevoEstado);
+    
+    // Deshabilitar botón mientras se procesa
+    const btnConfirmar = document.getElementById('btn-confirmar-cambio');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Procesando...';
+    
+    fetch('acciones_categorias.php', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('success', data.message);
+            cerrarModalEstado();
+            
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            mostrarNotificacion('error', data.error);
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmar Cambio';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('error', 'Error de conexión');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmar Cambio';
+    });
 }
 
 // Función para notificaciones

@@ -18,6 +18,10 @@ $es_admin = ($usuario_rol === 'admin');
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
+                        <!-- COLUMNA DE IMAGEN AGREGADA -->
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Imagen
+                        </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Producto
                         </th>
@@ -46,38 +50,59 @@ $es_admin = ($usuario_rol === 'admin');
                         $stock_class = ($producto['stock'] <= $producto['stock_minimo']) ? 'stock-bajo' : '';
                         $stock_badge = ($producto['stock'] <= $producto['stock_minimo']) ? 
                             '<span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Bajo</span>' : '';
+                        
+                        // DETERMINAR LA RUTA DE LA IMAGEN
+                        $imagen_path = '../../assets/img/no-image.png'; // Por defecto
+                        
+                        if (!empty($producto['imagen']) && $producto['imagen'] !== 'default.jpg') {
+                            // Verificar si la imagen existe en la carpeta de uploads
+                            $ruta_uploads = '../../uploads/products/' . $producto['imagen'];
+                            if (file_exists($ruta_uploads)) {
+                                $imagen_path = $ruta_uploads;
+                            }
+                        }
                     ?>
                     <tr class="hover:bg-gray-50 <?php echo $stock_class; ?>">
+                        <!-- COLUMNA DE IMAGEN CON IMAGEN REAL -->
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-box text-gray-500"></i>
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">
-                                        <?php echo htmlspecialchars($producto['nombre']); ?>
-                                    </div>
-                                    <div class="text-sm text-gray-500">
-                                        <?php echo htmlspecialchars($producto['categoria_nombre'] ?? 'Sin categoría'); ?>
-                                    </div>
+                                <div class="h-12 w-12 flex-shrink-0">
+                                    <img class="h-12 w-12 rounded-lg object-cover border border-gray-200" 
+                                         src="<?php echo $imagen_path; ?>" 
+                                         alt="<?php echo htmlspecialchars($producto['nombre']); ?>"
+                                         onerror="this.src='../../assets/img/no-image.png'">
                                 </div>
                             </div>
                         </td>
+                        
+                        <!-- COLUMNA DE PRODUCTO (solo nombre y categoría) -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                <?php echo htmlspecialchars($producto['nombre']); ?>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                <?php echo htmlspecialchars($producto['categoria_nombre'] ?? 'Sin categoría'); ?>
+                            </div>
+                        </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded font-mono">
                                 <?php echo htmlspecialchars($producto['codigo']); ?>
                             </span>
                         </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="text-sm font-medium text-gray-900">
                                 $<?php echo number_format($producto['precio_$'], 2); ?>
                             </span>
                         </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="text-sm font-medium text-green-700">
                                 Bs. <?php echo number_format($producto['precio_bs'] ?? 0, 2, ',', '.'); ?>
                             </span>
                         </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <span class="text-sm font-medium text-gray-900 mr-2">
@@ -86,11 +111,13 @@ $es_admin = ($usuario_rol === 'admin');
                                 <?php echo $stock_badge; ?>
                             </div>
                         </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 py-1 text-xs rounded-full <?php echo ($producto['estado'] == 'activo') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'; ?>">
                                 <?php echo ucfirst($producto['estado']); ?>
                             </span>
                         </td>
+                        
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2">
                                 <?php if ($es_admin): ?>
@@ -158,14 +185,13 @@ function cambiarEstadoProducto(id, estadoActual) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest' // ← Añade este header
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: `action=cambiar_estado&id=${id}&estado=${nuevoEstado}`
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Mostrar notificación y recargar
             showNotification('success', data.message || 'Estado actualizado correctamente');
             setTimeout(() => {
                 location.reload();
@@ -182,8 +208,6 @@ function cambiarEstadoProducto(id, estadoActual) {
 
 // Función auxiliar para mostrar notificaciones
 function showNotification(type, message) {
-    // Puedes usar tu sistema de notificaciones existente
-    // o esta simple implementación
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
     notification.textContent = message;

@@ -237,31 +237,66 @@ $producto = !empty($datos_formulario) ? array_merge($producto, $datos_formulario
                                 <option value="caja" <?php echo ($producto['unidad_medida'] == 'caja') ? 'selected' : ''; ?>>Caja</option>
                                 <option value="paquete" <?php echo ($producto['unidad_medida'] == 'paquete') ? 'selected' : ''; ?>>Paquete</option>
                             </select>
-                        </div>
-                        
+                        </div>      
+                                          
                         <!-- Imagen -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Imagen del Producto
                             </label>
                             <div class="flex items-center space-x-4">
-                                <div class="h-24 w-24 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                                    <?php if (!empty($producto['imagen']) && $producto['imagen'] != 'default.jpg'): ?>
-                                    <img src="/uploads/products/<?php echo htmlspecialchars($producto['imagen']); ?>" 
-                                         alt="<?php echo htmlspecialchars($producto['nombre']); ?>"
-                                         class="h-full w-full object-cover">
-                                    <?php else: ?>
-                                    <i class="fas fa-box text-gray-400 text-2xl"></i>
-                                    <?php endif; ?>
+                                <!-- Vista previa de la imagen actual -->
+                                <div class="h-24 w-24 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden border border-gray-300">
+                                    <?php 
+                                    // Determinar la ruta correcta de la imagen
+                                    $imagen_actual = '../../assets/img/no-image.png'; // Por defecto
+                                    
+                                    if (!empty($producto['imagen']) && $producto['imagen'] != 'default.jpg') {
+                                        $ruta_imagen = '../../uploads/products/' . $producto['imagen'];
+                                        // Verificar si el archivo existe
+                                        if (file_exists($ruta_imagen)) {
+                                            $imagen_actual = $ruta_imagen;
+                                        }
+                                    }
+                                    ?>
+                                    <img src="<?php echo $imagen_actual; ?>" 
+                                        alt="<?php echo htmlspecialchars($producto['nombre']); ?>"
+                                        class="h-full w-full object-cover"
+                                        id="imagen-preview"
+                                        onerror="this.src='../../assets/img/no-image.png'">
                                 </div>
+                                
+                                <!-- Controles para subir nueva imagen -->
                                 <div class="flex-1">
                                     <input type="file" 
-                                           name="imagen" 
-                                           accept="image/*"
-                                           class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                                    <p class="text-xs text-gray-500 mt-1">Deja vacío para mantener la imagen actual</p>
+                                        name="imagen" 
+                                        id="imagen-input"
+                                        accept="image/*"
+                                        class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Deja vacío para mantener la imagen actual. Formatos: JPG, PNG, GIF (Max. 2MB)
+                                    </p>
+                                    
+                                    <!-- Opción para eliminar imagen (solo si existe imagen actual) -->
+                                    <?php if (!empty($producto['imagen']) && $producto['imagen'] != 'default.jpg'): ?>
+                                    <div class="mt-2">
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" name="eliminar_imagen" value="1" class="rounded border-gray-300 text-red-600 shadow-sm focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50">
+                                            <span class="ml-2 text-sm text-red-600">Eliminar imagen actual</span>
+                                        </label>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                            
+                            <!-- Nombre de la imagen actual (solo para referencia) -->
+                            <?php if (!empty($producto['imagen']) && $producto['imagen'] != 'default.jpg'): ?>
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-image mr-1"></i>
+                                Imagen actual: <span class="font-mono"><?php echo htmlspecialchars($producto['imagen']); ?></span>
+                            </p>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Estado -->

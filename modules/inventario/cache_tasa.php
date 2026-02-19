@@ -4,7 +4,12 @@
 class TasaBCVCache {
     private $db;
     private $cache_time = 3600; // 1 hora en segundos
-    private $api_url = 'https://ve.dolarapi.com/v1/dolares/oficial';
+    private $bcv_url = 'http://www.bcv.org.ve/';
+    private $user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    ];
     
     public function __construct() {
         $database = Database::getInstance();
@@ -12,7 +17,7 @@ class TasaBCVCache {
     }
     
     /**
-     * Obtiene la tasa BCV actual (desde cache o API)
+     * Obtiene la tasa BCV actual (desde cache o scraping)
      */
     public function getTasa() {
         // Primero intentar obtener del cache
@@ -23,9 +28,9 @@ class TasaBCVCache {
             return (float) $cached_rate['tasa_usd'];
         }
         
-        // Si el cache está expirado o no existe, obtener de la API
-        error_log("Cache expirado o no existe, obteniendo desde API...");
-        return $this->fetchAndUpdateAPI();
+        // Si el cache está expirado o no existe, hacer scraping
+        error_log("Cache expirado o no existe, haciendo scraping del BCV...");
+        return $this->scrapeAndUpdate();
     }
     
     /**
@@ -61,45 +66,27 @@ class TasaBCVCache {
     }
     
     /**
-     * Obtiene la tasa desde la API y actualiza el cache existente
+     * Realiza el scraping de la página del BCV
      */
-    private function fetchAndUpdateAPI() {
-        try {
-            $tasa_usd = $this->fetchTasaFromAPI();
-            
-            if ($tasa_usd === null || $tasa_usd <= 0) {
-                error_log("API devolvió tasa inválida, usando fallback");
-                return $this->getFallbackRate();
-            }
-            
-            // Actualizar o crear registro en cache
-            $this->updateOrCreateCache($tasa_usd);
-            
-            error_log("Tasa actualizada desde API: " . $tasa_usd . " Bs/USD");
-            
-            return $tasa_usd;
-            
-        } catch (Exception $e) {
-            error_log("Error fetching from API: " . $e->getMessage());
-            return $this->getFallbackRate();
-        }
-    }
-    
-    /**
-     * Obtiene la tasa desde la API externa
-     */
-    private function fetchTasaFromAPI() {
+    private function scrapeBCV() {
+        // Seleccionar User-Agent aleatorio
+        $user_agent = $this->user_agents[array_rand($this->user_agents)];
+        
         $ch = curl_init();
         
         curl_setopt_array($ch, [
-            CURLOPT_URL => $this->api_url,
+            CURLOPT_URL => $this->bcv_url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_TIMEOUT => 10,
+            CURLOPT_TIMEOUT => 15,
             CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT => $user_agent,
             CURLOPT_HTTPHEADER => [
-                'Accept: application/json',
-                'User-Agent: Mozilla/5.0 (compatible; InventarioApp/1.0)'
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3',
+                'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                'Connection: keep-alive',
+                'Upgrade-Insecure-Requests: 1'
             ]
         ]);
         
@@ -109,57 +96,150 @@ class TasaBCVCache {
         if (curl_errno($ch)) {
             $error_msg = curl_error($ch);
             curl_close($ch);
-            throw new Exception("cURL Error: " . $error_msg);
+            throw new Exception("cURL Error al conectar con BCV: " . $error_msg);
         }
         
         curl_close($ch);
         
         if ($http_code !== 200) {
-            throw new Exception("API responded with code: " . $http_code);
+            throw new Exception("BCV responded with code: " . $http_code);
         }
         
-        $data = json_decode($response, true);
-        
-        if (!$data) {
-            throw new Exception("Invalid API response format");
-        }
-        
-        return $this->parseAPIResponse($data);
+        return $response;
     }
     
     /**
-     * Parsea la respuesta de la API
+     * Extrae la tasa del dolar del HTML del BCV
      */
-    private function parseAPIResponse($data) {
-        // Usar el promedio si está disponible
-        if (isset($data['promedio']) && $data['promedio'] > 0) {
-            return (float) $data['promedio'];
+    private function extractTasaFromHTML($html) {
+        if (!$html) {
+            throw new Exception("HTML vacío recibido del BCV");
         }
         
-        // Si no hay promedio, usar un cálculo entre compra y venta
-        if (isset($data['compra']) && isset($data['venta']) && 
-            $data['compra'] > 0 && $data['venta'] > 0) {
-            return (float) (($data['compra'] + $data['venta']) / 2);
+        // Crear un DOM document para parsear el HTML
+        $dom = new DOMDocument();
+        libxml_use_internal_errors(true); // Suprimir warnings de HTML mal formado
+        $dom->loadHTML($html);
+        libxml_clear_errors();
+        
+        $xpath = new DOMXPath($dom);
+        
+        // Intentar diferentes selectores XPath que podrían contener la tasa
+        
+        // Selector 1: Buscar por el ID específico (basado en la estructura del BCV)
+        $elements = $xpath->query("//div[contains(@id, 'dolar')]//strong");
+        if ($elements->length > 0) {
+            $tasa_text = trim($elements->item(0)->nodeValue);
+            return $this->parseTasaText($tasa_text);
         }
         
-        // Si solo hay venta
-        if (isset($data['venta']) && $data['venta'] > 0) {
-            return (float) $data['venta'];
+        // Selector 2: Buscar por clase específica
+        $elements = $xpath->query("//div[contains(@class, 'dolar')]//strong");
+        if ($elements->length > 0) {
+            $tasa_text = trim($elements->item(0)->nodeValue);
+            return $this->parseTasaText($tasa_text);
         }
         
-        // Si solo hay compra
-        if (isset($data['compra']) && $data['compra'] > 0) {
-            return (float) $data['compra'];
+        // Selector 3: Buscar en la tabla de tasas (estructura común del BCV)
+        $elements = $xpath->query("//table//tr[td[contains(text(), 'USD')]]/td[2]");
+        if ($elements->length > 0) {
+            $tasa_text = trim($elements->item(0)->nodeValue);
+            return $this->parseTasaText($tasa_text);
         }
         
-        throw new Exception("No valid rate found in API response");
+        // Selector 4: Buscar usando expresiones regulares como fallback
+        $patterns = [
+            '/<strong>([0-9]+\.[0-9]+)<\/strong>/',
+            '/dolar.*?([0-9]+\.[0-9]+)/i',
+            '/USD.*?([0-9]+\.[0-9]+)/i'
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $html, $matches)) {
+                if (isset($matches[1])) {
+                    return (float) $matches[1];
+                }
+            }
+        }
+        
+        throw new Exception("No se pudo extraer la tasa del HTML del BCV");
     }
     
     /**
-     * Actualiza el registro existente o crea uno nuevo si no existe
+     * Parsea el texto de la tasa a número
+     */
+    private function parseTasaText($text) {
+        // Limpiar el texto: eliminar espacios, convertir coma a punto si es necesario
+        $text = preg_replace('/[^0-9.,]/', '', $text);
+        
+        // Manejar formato con coma decimal (ej: 36,50)
+        if (strpos($text, ',') !== false && strpos($text, '.') === false) {
+            $text = str_replace(',', '.', $text);
+        }
+        
+        // Manejar formato con punto de miles y coma decimal (ej: 1.234,56)
+        if (strpos($text, '.') !== false && strpos($text, ',') !== false) {
+            // Asumimos que el último punto o coma es el decimal
+            if (strrpos($text, ',') > strrpos($text, '.')) {
+                // Formato europeo: punto como separador de miles, coma decimal
+                $text = str_replace('.', '', $text);
+                $text = str_replace(',', '.', $text);
+            } else {
+                // Formato US: coma como separador de miles, punto decimal
+                $text = str_replace(',', '', $text);
+            }
+        }
+        
+        return (float) $text;
+    }
+    
+    /**
+     * Realiza el scraping y actualiza el cache
+     */
+    private function scrapeAndUpdate() {
+        try {
+            // Intentar scraping hasta 3 veces
+            $max_attempts = 3;
+            $attempt = 1;
+            $tasa_usd = null;
+            
+            while ($attempt <= $max_attempts && $tasa_usd === null) {
+                try {
+                    error_log("Intento $attempt de scraping al BCV");
+                    $html = $this->scrapeBCV();
+                    $tasa_usd = $this->extractTasaFromHTML($html);
+                } catch (Exception $e) {
+                    error_log("Intento $attempt falló: " . $e->getMessage());
+                    if ($attempt < $max_attempts) {
+                        sleep(2); // Esperar 2 segundos antes de reintentar
+                    }
+                }
+                $attempt++;
+            }
+            
+            if ($tasa_usd === null || $tasa_usd <= 0) {
+                error_log("No se pudo obtener tasa del BCV después de $max_attempts intentos, usando fallback");
+                return $this->getFallbackRate();
+            }
+            
+            // Actualizar o crear registro en cache
+            $this->updateOrCreateCache($tasa_usd);
+            
+            error_log("Tasa obtenida del BCV mediante scraping: " . $tasa_usd . " Bs/USD");
+            
+            return $tasa_usd;
+            
+        } catch (Exception $e) {
+            error_log("Error en scraping del BCV: " . $e->getMessage());
+            return $this->getFallbackRate();
+        }
+    }
+    
+    /**
+     * Actualiza el registro existente o crea uno nuevo
      */
     private function updateOrCreateCache($tasa_usd) {
-        // Primero verificar si existe un registro para hoy
+        // Verificar si existe un registro para hoy
         $sql_check = "SELECT id FROM tasa_bcv_cache 
                      WHERE DATE(fecha_actualizacion) = CURDATE() 
                      LIMIT 1";
@@ -175,7 +255,7 @@ class TasaBCVCache {
                     WHERE DATE(fecha_actualizacion) = CURDATE()";
             
             $stmt = $this->db->prepare($sql);
-            $fuente = 've.dolarapi.com';
+            $fuente = 'bcv.gob.ve (scraping)';
             $stmt->bind_param("ds", $tasa_usd, $fuente);
             
             if ($stmt->execute()) {
@@ -186,7 +266,7 @@ class TasaBCVCache {
             $stmt->close();
             
         } else {
-            // Crear nuevo registro para hoy
+            // Crear nuevo registro
             $sql = "INSERT INTO tasa_bcv_cache 
                     (tasa_usd, tasa_eur, fecha_consulta, fecha_actualizacion, fuente) 
                     VALUES (?, ?, NOW(), CURDATE(), ?)";
@@ -194,7 +274,7 @@ class TasaBCVCache {
             $stmt = $this->db->prepare($sql);
             
             $tasa_eur = 0.0;
-            $fuente = 've.dolarapi.com';
+            $fuente = 'bcv.gob.ve (scraping)';
             
             $stmt->bind_param("dds", $tasa_usd, $tasa_eur, $fuente);
             
@@ -206,7 +286,7 @@ class TasaBCVCache {
             $stmt->close();
         }
         
-        // Limpiar registros antiguos (más de 30 días)
+        // Limpiar registros antiguos
         $this->cleanOldCache(30);
     }
     
@@ -233,7 +313,7 @@ class TasaBCVCache {
     }
     
     /**
-     * Tasa de respaldo si la API falla
+     * Tasa de respaldo si el scraping falla
      */
     private function getFallbackRate() {
         $last_rate = $this->getLatestCache();
@@ -242,21 +322,62 @@ class TasaBCVCache {
             return (float) $last_rate['tasa_usd'];
         }
         
-        // Si no hay nada en cache, usar tasa por defecto
+        // Intentar obtener de fuente alternativa (dolarapi.com como último recurso)
+        try {
+            error_log("Intentando dolarapi.com como fallback...");
+            $tasa_alternativa = $this->fetchFromDolarAPI();
+            if ($tasa_alternativa > 0) {
+                return $tasa_alternativa;
+            }
+        } catch (Exception $e) {
+            error_log("Fallback de dolarapi también falló: " . $e->getMessage());
+        }
+        
+        // Si todo falla, usar tasa por defecto
         $fallback_rate = 36.50;
         error_log("Usando tasa por defecto como fallback: " . $fallback_rate);
         return $fallback_rate;
     }
     
     /**
-     * Fuerza la actualización de la tasa
+     * Fallback a dolarapi.com si BCV no funciona
+     */
+    private function fetchFromDolarAPI() {
+        $api_url = 'https://ve.dolarapi.com/v1/dolares/oficial';
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $api_url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($http_code === 200) {
+            $data = json_decode($response, true);
+            if (isset($data['promedio'])) {
+                return (float) $data['promedio'];
+            }
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Fuerza la actualización mediante scraping
      */
     public function forceUpdate() {
         try {
-            $tasa_usd = $this->fetchTasaFromAPI();
+            $tasa_usd = null;
+            $html = $this->scrapeBCV();
+            $tasa_usd = $this->extractTasaFromHTML($html);
             
             if ($tasa_usd === null || $tasa_usd <= 0) {
-                throw new Exception("API devolvió tasa inválida");
+                throw new Exception("Scraping devolvió tasa inválida");
             }
             
             // Actualizar o crear registro
@@ -271,7 +392,7 @@ class TasaBCVCache {
     }
     
     /**
-     * Obtiene el historial de tasas (solo un registro por día)
+     * Obtiene el historial de tasas
      */
     public function getHistory($days = 30) {
         $sql = "SELECT 

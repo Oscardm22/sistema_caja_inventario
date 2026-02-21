@@ -517,5 +517,87 @@ class InventarioModel {
         
         return $row['total'] ?? 0;
     }
+
+    /**
+     * Obtener categorías paginadas con filtros
+     */
+    public function getCategoriasPaginadas($pagina = 1, $por_pagina = 10, $filtros = []) {
+        $offset = ($pagina - 1) * $por_pagina;
+        
+        $sql = "SELECT SQL_CALC_FOUND_ROWS c.*, 
+                (SELECT COUNT(*) FROM productos WHERE categoria_id = c.id) as total_productos 
+                FROM categorias c 
+                WHERE 1=1";
+        
+        $params = [];
+        $types = "";
+        
+        // Aplicar filtros si existen
+        if (!empty($filtros['estado'])) {
+            $sql .= " AND c.estado = ?";
+            $params[] = $filtros['estado'];
+            $types .= "s";
+        }
+        
+        if (!empty($filtros['busqueda'])) {
+            $sql .= " AND (c.nombre LIKE ? OR c.descripcion LIKE ?)";
+            $busqueda = "%" . $filtros['busqueda'] . "%";
+            $params[] = $busqueda;
+            $params[] = $busqueda;
+            $types .= "ss";
+        }
+        
+        $sql .= " ORDER BY c.nombre ASC LIMIT ? OFFSET ?";
+        $params[] = $por_pagina;
+        $params[] = $offset;
+        $types .= "ii";
+        
+        $stmt = $this->db->prepare($sql);
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $categorias = [];
+        while ($row = $result->fetch_assoc()) {
+            $categorias[] = $row;
+        }
+        
+        $stmt->close();
+        
+        // Obtener total de registros
+        $result_total = $this->db->query("SELECT FOUND_ROWS() as total");
+        $total = $result_total->fetch_assoc()['total'];
+        
+        return [
+            'categorias' => $categorias,
+            'total' => $total,
+            'paginas' => ceil($total / $por_pagina),
+            'pagina_actual' => $pagina,
+            'por_pagina' => $por_pagina
+        ];
+    }
+
+    /**
+     * Obtener todas las categorías sin paginación (para estadísticas)
+     */
+    public function getTodasCategorias() {
+        $sql = "SELECT c.*, 
+                (SELECT COUNT(*) FROM productos WHERE categoria_id = c.id) as total_productos 
+                FROM categorias c 
+                ORDER BY c.nombre ASC";
+        
+        $result = $this->db->query($sql);
+        
+        $categorias = [];
+        while ($row = $result->fetch_assoc()) {
+            $categorias[] = $row;
+        }
+        
+        return $categorias;
+    }
 }
 ?>

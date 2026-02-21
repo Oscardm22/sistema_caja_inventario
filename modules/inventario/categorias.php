@@ -13,13 +13,36 @@ require_once '../../includes/header.php';
 // Instanciar modelo
 $model = new InventarioModel();
 
-// Obtener categorías
-$categorias = $model->getCategorias();
+// Obtener parámetros de paginación y filtros
+$pagina = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+$por_pagina = isset($_GET['por_pagina']) ? (int)$_GET['por_pagina'] : 10;
+$filtro_estado = $_GET['estado'] ?? '';
+$busqueda = $_GET['busqueda'] ?? '';
 
-// Contador para estadísticas
-$total_categorias = count($categorias);
+// Validar valores
+if ($pagina < 1) $pagina = 1;
+if (!in_array($por_pagina, [10, 25, 50, 100])) $por_pagina = 10;
+
+// Preparar filtros
+$filtros = [];
+if (!empty($filtro_estado)) {
+    $filtros['estado'] = $filtro_estado;
+}
+if (!empty($busqueda)) {
+    $filtros['busqueda'] = $busqueda;
+}
+
+// Obtener categorías paginadas
+$resultado = $model->getCategoriasPaginadas($pagina, $por_pagina, $filtros);
+$categorias = $resultado['categorias'];
+$total_categorias = $resultado['total'];
+$total_paginas = $resultado['paginas'];
+$pagina_actual = $resultado['pagina_actual'];
+
+// Obtener todas las categorías para estadísticas
+$todas_categorias = $model->getTodasCategorias();
 $categorias_activas = 0;
-foreach ($categorias as $cat) {
+foreach ($todas_categorias as $cat) {
     if ($cat['estado'] == 'activa') {
         $categorias_activas++;
     }
@@ -69,6 +92,50 @@ foreach ($categorias as $cat) {
             </div>
         </div>
 
+        <!-- Filtros y búsqueda -->
+        <div class="bg-white rounded-lg shadow mb-6 p-4">
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                    <input type="text" 
+                           name="busqueda" 
+                           value="<?php echo htmlspecialchars($busqueda); ?>"
+                           placeholder="Nombre o descripción..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select name="estado" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todos</option>
+                        <option value="activa" <?php echo $filtro_estado == 'activa' ? 'selected' : ''; ?>>Activas</option>
+                        <option value="inactiva" <?php echo $filtro_estado == 'inactiva' ? 'selected' : ''; ?>>Inactivas</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mostrar</label>
+                    <select name="por_pagina" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="10" <?php echo $por_pagina == 10 ? 'selected' : ''; ?>>10 por página</option>
+                        <option value="25" <?php echo $por_pagina == 25 ? 'selected' : ''; ?>>25 por página</option>
+                        <option value="50" <?php echo $por_pagina == 50 ? 'selected' : ''; ?>>50 por página</option>
+                        <option value="100" <?php echo $por_pagina == 100 ? 'selected' : ''; ?>>100 por página</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-end space-x-2">
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-search mr-2"></i>Filtrar
+                    </button>
+                    <a href="categorias.php" 
+                       class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        <i class="fas fa-undo mr-2"></i>Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+
         <!-- Tabla de categorías -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <?php if (empty($categorias)): ?>
@@ -107,10 +174,7 @@ foreach ($categorias as $cat) {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <?php foreach ($categorias as $categoria): 
-                                // Obtener conteo de productos para esta categoría
-                                $productos_count = $model->contarProductosPorCategoria($categoria['id']);
-                            ?>
+                            <?php foreach ($categorias as $categoria): ?>
                             <tr class="hover:bg-gray-50" id="categoria-<?php echo $categoria['id']; ?>">
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
@@ -131,8 +195,8 @@ foreach ($categorias as $cat) {
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                        <?php echo $productos_count > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>">
-                                        <?php echo $productos_count; ?> productos
+                                        <?php echo $categoria['total_productos'] > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'; ?>">
+                                        <?php echo $categoria['total_productos']; ?> productos
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -154,7 +218,7 @@ foreach ($categorias as $cat) {
                                             <?php echo $categoria['id']; ?>, 
                                             '<?php echo $categoria['estado']; ?>',
                                             '<?php echo htmlspecialchars($categoria['nombre']); ?>',
-                                            <?php echo $productos_count; ?>
+                                            <?php echo $categoria['total_productos']; ?>
                                         )" 
                                                 class="<?php echo ($categoria['estado'] == 'activa') ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'; ?>">
                                             <i class="fas <?php echo ($categoria['estado'] == 'activa') ? 'fa-pause' : 'fa-play'; ?>"></i>
@@ -165,6 +229,75 @@ foreach ($categorias as $cat) {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Información de paginación y controles -->
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                    <div class="flex flex-col sm:flex-row items-center justify-between">
+                        <div class="text-sm text-gray-700 mb-4 sm:mb-0">
+                            Mostrando <span class="font-medium"><?php echo (($pagina_actual - 1) * $por_pagina) + 1; ?></span>
+                            a <span class="font-medium"><?php echo min($pagina_actual * $por_pagina, $total_categorias); ?></span>
+                            de <span class="font-medium"><?php echo $total_categorias; ?></span> categorías
+                        </div>
+                        
+                        <?php if ($total_paginas > 1): ?>
+                        <div class="flex space-x-2">
+                            <!-- Botón Primera página -->
+                            <?php if ($pagina_actual > 1): ?>
+                                <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => 1])); ?>" 
+                                   class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            <?php endif; ?>
+                            
+                            <!-- Botón Anterior -->
+                            <?php if ($pagina_actual > 1): ?>
+                                <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $pagina_actual - 1])); ?>" 
+                                   class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            <?php endif; ?>
+                            
+                            <!-- Números de página -->
+                            <?php
+                            $rango = 2;
+                            $inicio = max(1, $pagina_actual - $rango);
+                            $fin = min($total_paginas, $pagina_actual + $rango);
+                            
+                            if ($inicio > 1) {
+                                echo '<span class="px-3 py-1 text-gray-500">...</span>';
+                            }
+                            
+                            for ($i = $inicio; $i <= $fin; $i++):
+                            ?>
+                                <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $i])); ?>" 
+                                   class="px-3 py-1 <?php echo $i == $pagina_actual ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?> border border-gray-300 rounded-md text-sm font-medium">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+                            
+                            <?php if ($fin < $total_paginas): ?>
+                                <span class="px-3 py-1 text-gray-500">...</span>
+                            <?php endif; ?>
+                            
+                            <!-- Botón Siguiente -->
+                            <?php if ($pagina_actual < $total_paginas): ?>
+                                <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $pagina_actual + 1])); ?>" 
+                                   class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            <?php endif; ?>
+                            
+                            <!-- Botón Última página -->
+                            <?php if ($pagina_actual < $total_paginas): ?>
+                                <a href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $total_paginas])); ?>" 
+                                   class="px-3 py-1 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             <?php endif; ?>
         </div>

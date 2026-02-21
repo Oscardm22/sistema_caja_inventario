@@ -1,26 +1,97 @@
-// modules/inventario/assets/js/categorias.js
+// Funciones modales básicas
+function abrirModalCrear() {
+    document.getElementById('modal-titulo').textContent = 'Nueva Categoría';
+    document.getElementById('form-categoria').reset();
+    document.getElementById('categoria-id').value = '';
+    document.getElementById('modal-categoria').classList.remove('hidden');
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurar formulario de categoría
-    const formCategoria = document.getElementById('form-categoria');
-    
-    if (formCategoria) {
-        formCategoria.addEventListener('submit', function(e) {
-            e.preventDefault();
-            guardarCategoria();
+function abrirModalEditar(id) {
+    fetch(`acciones_categorias.php?action=obtener&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('modal-titulo').textContent = 'Editar Categoría';
+                document.getElementById('categoria-id').value = data.categoria.id;
+                document.getElementById('nombre').value = data.categoria.nombre;
+                document.getElementById('descripcion').value = data.categoria.descripcion || '';
+                document.getElementById('estado').value = data.categoria.estado;
+                document.getElementById('modal-categoria').classList.remove('hidden');
+            } else {
+                mostrarNotificacion('error', data.error || 'Error al cargar categoría');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('error', 'Error de conexión');
         });
-    }
-});
+}
 
-function guardarCategoria() {
+function abrirModalCambiarEstado(id, estadoActual, nombreCategoria, tieneProductos = false) {
+    const nuevoEstado = estadoActual === 'activa' ? 'inactiva' : 'activa';
+    
+    // Guardar datos en el modal
+    document.getElementById('estado-categoria-id').value = id;
+    document.getElementById('estado-categoria-nuevo').value = nuevoEstado;
+    document.getElementById('categoria-nombre-modal').textContent = nombreCategoria;
+    
+    // Configurar icono y mensajes según el cambio
+    const icono = document.getElementById('estado-icono');
+    const mensaje = document.getElementById('modal-estado-mensaje');
+    const estadoActualBadge = document.getElementById('estado-actual-badge');
+    const estadoNuevoBadge = document.getElementById('estado-nuevo-badge');
+    
+    if (nuevoEstado === 'inactiva') {
+        // Activa → Inactiva
+        icono.className = 'fas fa-pause-circle text-6xl text-yellow-500';
+        mensaje.textContent = '¿Estás seguro de desactivar esta categoría?';
+        estadoActualBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+        estadoActualBadge.textContent = 'Activa';
+        estadoNuevoBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+        estadoNuevoBadge.textContent = 'Inactiva';
+    } else {
+        // Inactiva → Activa
+        icono.className = 'fas fa-play-circle text-6xl text-green-500';
+        mensaje.textContent = '¿Estás seguro de activar esta categoría?';
+        estadoActualBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+        estadoActualBadge.textContent = 'Inactiva';
+        estadoNuevoBadge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+        estadoNuevoBadge.textContent = 'Activa';
+    }
+    
+    // Mostrar advertencia si tiene productos (solo cuando se va a desactivar)
+    const advertenciaDiv = document.getElementById('productos-advertencia');
+    if (tieneProductos && nuevoEstado === 'inactiva') {
+        advertenciaDiv.classList.remove('hidden');
+        document.getElementById('productos-mensaje').textContent = 
+            `Esta categoría tiene ${tieneProductos} producto(s) asociado(s). Al desactivarla, los productos no se eliminarán pero quedarán en una categoría inactiva.`;
+    } else {
+        advertenciaDiv.classList.add('hidden');
+    }
+    
+    // Mostrar modal
+    document.getElementById('modal-cambiar-estado').classList.remove('hidden');
+}
+
+function cerrarModal() {
+    document.getElementById('modal-categoria').classList.add('hidden');
+    document.getElementById('form-categoria').reset();
+    document.getElementById('categoria-id').value = '';
+}
+
+function cerrarModalEstado() {
+    document.getElementById('modal-cambiar-estado').classList.add('hidden');
+}
+
+// Función para crear nueva categoría
+function crearCategoria() {
     const formData = new FormData(document.getElementById('form-categoria'));
-    const categoriaId = document.getElementById('categoria-id').value;
-    const action = categoriaId ? 'editar' : 'crear';
+    formData.append('action', 'crear');
     
-    // Agregar action al formData
-    formData.append('action', action);
+    const submitBtn = document.querySelector('#form-categoria button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
     
-    // Añadir header X-Requested-With para identificar como AJAX
     fetch('acciones_categorias.php', {
         method: 'POST',
         headers: {
@@ -28,12 +99,7 @@ function guardarCategoria() {
         },
         body: formData
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor: ' + response.status);
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
             mostrarNotificacion('success', data.message);
@@ -44,83 +110,73 @@ function guardarCategoria() {
                 location.reload();
             }, 1000);
         } else {
-            mostrarNotificacion('error', data.error);
+            mostrarNotificacion('error', data.error || 'Error al crear categoría');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        mostrarNotificacion('error', 'Error de conexión: ' + error.message);
+        mostrarNotificacion('error', 'Error de conexión');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
     });
 }
 
-function cambiarEstadoCategoria(id, estadoActual) {
-    if (!confirm('¿Estás seguro de cambiar el estado de esta categoría?')) {
-        return;
-    }
+// Función para actualizar categoría existente
+function actualizarCategoria() {
+    const formData = new FormData(document.getElementById('form-categoria'));
+    formData.append('action', 'editar');
     
-    const nuevoEstado = estadoActual === 'activa' ? 'inactiva' : 'activa';
+    const submitBtn = document.querySelector('#form-categoria button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Actualizando...';
+    
+    fetch('acciones_categorias.php', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('success', data.message);
+            cerrarModal();
+            
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            mostrarNotificacion('error', data.error || 'Error al actualizar categoría');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('error', 'Error de conexión');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
+    });
+}
+
+// Función para cambiar estado desde el modal
+function cambiarEstadoCategoriaModal() {
+    const id = document.getElementById('estado-categoria-id').value;
+    const nuevoEstado = document.getElementById('estado-categoria-nuevo').value;
+    
     const formData = new FormData();
     formData.append('action', 'cambiar_estado');
     formData.append('id', id);
     formData.append('estado', nuevoEstado);
     
-    fetch('acciones_categorias.php', {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            mostrarNotificacion('success', data.message);
-            
-            // Actualizar la fila sin recargar toda la página
-            const fila = document.getElementById(`categoria-${id}`);
-            if (fila) {
-                // Actualizar estado visual
-                const estadoBadge = fila.querySelector('.bg-green-100, .bg-red-100');
-                if (estadoBadge) {
-                    estadoBadge.className = `px-2 py-1 text-xs rounded-full ${nuevoEstado === 'activa' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
-                    estadoBadge.textContent = nuevoEstado === 'activa' ? 'Activa' : 'Inactiva';
-                }
-                
-                // Actualizar ícono del botón
-                const icono = fila.querySelector('.fa-play, .fa-pause');
-                if (icono) {
-                    icono.className = nuevoEstado === 'activa' ? 'fas fa-pause' : 'fas fa-play';
-                }
-                
-                // Actualizar color del botón
-                const boton = fila.querySelector('.text-yellow-600, .text-green-600');
-                if (boton) {
-                    boton.className = nuevoEstado === 'activa' ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900';
-                }
-            }
-        } else {
-            mostrarNotificacion('error', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarNotificacion('error', 'Error de conexión');
-    });
-}
-
-function eliminarCategoria(id) {
-    if (!confirm('¿Estás seguro de eliminar esta categoría?\n\nEsta acción no se puede deshacer.')) {
-        return;
-    }
-    
-    const formData = new FormData();
-    formData.append('action', 'eliminar');
-    formData.append('id', id);
+    // Deshabilitar botón mientras se procesa
+    const btnConfirmar = document.getElementById('btn-confirmar-cambio');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Procesando...';
     
     fetch('acciones_categorias.php', {
         method: 'POST',
@@ -129,66 +185,74 @@ function eliminarCategoria(id) {
         },
         body: formData
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor: ' + response.status);
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.success) {
             mostrarNotificacion('success', data.message);
+            cerrarModalEstado();
             
-            // Eliminar la fila de la tabla
-            const fila = document.getElementById(`categoria-${id}`);
-            if (fila) {
-                fila.remove();
-                
-                // Actualizar contadores
-                actualizarContadores();
-            }
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
         } else {
             mostrarNotificacion('error', data.error);
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmar Cambio';
         }
     })
     .catch(error => {
         console.error('Error:', error);
         mostrarNotificacion('error', 'Error de conexión');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check mr-2"></i>Confirmar Cambio';
     });
 }
 
-function actualizarContadores() {
-    // Actualizar contador de total de categorías
-    const filas = document.querySelectorAll('tbody tr');
-    const totalCategorias = filas.length;
+// Función para notificaciones
+function mostrarNotificacion(tipo, mensaje) {
+    // Limpiar notificaciones anteriores
+    const notificacionesAnteriores = document.querySelectorAll('.notificacion-flotante');
+    notificacionesAnteriores.forEach(notif => notif.remove());
     
-    const totalElements = document.querySelectorAll('.text-2xl.font-bold');
-    if (totalElements.length > 0) {
-        totalElements[0].textContent = totalCategorias;
-    }
+    const notification = document.createElement('div');
+    notification.className = `notificacion-flotante fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${tipo === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+    notification.textContent = mensaje;
+    document.body.appendChild(notification);
     
-    // Actualizar contador de categorías activas
-    const activas = document.querySelectorAll('.bg-green-100.text-green-800').length;
-    if (totalElements.length > 1) {
-        totalElements[1].textContent = activas;
-    }
-    
-    // Si no hay categorías, mostrar mensaje de "no hay categorías"
-    if (totalCategorias === 0) {
-        const tablaContainer = document.querySelector('.bg-white.rounded-lg.shadow');
-        if (tablaContainer) {
-            const emptyHTML = `
-                <div class="p-8 text-center text-gray-500">
-                    <i class="fas fa-tags text-4xl mb-4 text-gray-300"></i>
-                    <p class="text-lg">No hay categorías creadas</p>
-                    <p class="text-sm">Crea tu primera categoría para organizar los productos</p>
-                    <button onclick="abrirModalCrear()" 
-                            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        <i class="fas fa-plus mr-2"></i>Crear Categoría
-                    </button>
-                </div>
-            `;
-            tablaContainer.innerHTML = emptyHTML;
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
         }
-    }
+    }, 3000);
 }
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para formulario de categoría (crear/editar)
+    const formCategoria = document.getElementById('form-categoria');
+    if (formCategoria) {
+        formCategoria.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('categoria-id').value;
+            
+            if (id) {
+                // Es una edición
+                actualizarCategoria();
+            } else {
+                // Es una creación
+                crearCategoria();
+            }
+        });
+    }
+    
+    // Listener para formulario de cambio de estado
+    const formCambiarEstado = document.getElementById('form-cambiar-estado');
+    if (formCambiarEstado) {
+        formCambiarEstado.addEventListener('submit', function(e) {
+            e.preventDefault();
+            cambiarEstadoCategoriaModal();
+        });
+    }
+});

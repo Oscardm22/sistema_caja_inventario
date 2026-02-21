@@ -159,12 +159,6 @@ foreach ($categorias as $cat) {
                                                 class="<?php echo ($categoria['estado'] == 'activa') ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'; ?>">
                                             <i class="fas <?php echo ($categoria['estado'] == 'activa') ? 'fa-pause' : 'fa-play'; ?>"></i>
                                         </button>
-                                        <?php if ($productos_count == 0): ?>
-                                        <button onclick="eliminarCategoria(<?php echo $categoria['id']; ?>)" 
-                                                class="text-red-600 hover:text-red-900">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -306,8 +300,6 @@ foreach ($categorias as $cat) {
     </div>
 </div>
 
-<!-- JavaScript para categorías -->
-<script src="assets/js/categorias.js"></script>
 <script>
 // Funciones modales básicas
 function abrirModalCrear() {
@@ -338,7 +330,6 @@ function abrirModalEditar(id) {
         });
 }
 
-// 🆕 NUEVA FUNCIÓN: Abrir modal para cambiar estado
 function abrirModalCambiarEstado(id, estadoActual, nombreCategoria, tieneProductos = false) {
     const nuevoEstado = estadoActual === 'activa' ? 'inactiva' : 'activa';
     
@@ -385,12 +376,10 @@ function abrirModalCambiarEstado(id, estadoActual, nombreCategoria, tieneProduct
     document.getElementById('modal-cambiar-estado').classList.remove('hidden');
 }
 
-// 🆕 NUEVA FUNCIÓN: Cerrar modal de estado
 function cerrarModalEstado() {
     document.getElementById('modal-cambiar-estado').classList.add('hidden');
 }
 
-// 🆕 NUEVA FUNCIÓN: Configurar el formulario de cambio de estado
 document.addEventListener('DOMContentLoaded', function() {
     const formCambiarEstado = document.getElementById('form-cambiar-estado');
     if (formCambiarEstado) {
@@ -401,7 +390,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 🆕 NUEVA FUNCIÓN: Cambiar estado desde el modal
 function cambiarEstadoCategoriaModal() {
     const id = document.getElementById('estado-categoria-id').value;
     const nuevoEstado = document.getElementById('estado-categoria-nuevo').value;
@@ -457,6 +445,112 @@ function mostrarNotificacion(tipo, mensaje) {
     setTimeout(() => {
         notification.remove();
     }, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const formCategoria = document.getElementById('form-categoria');
+    if (formCategoria) {
+        formCategoria.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('categoria-id').value;
+            
+            if (id) {
+                // Es una edición
+                actualizarCategoria();
+            } else {
+                // Es una creación
+                crearCategoria();
+            }
+        });
+    }
+});
+
+// Función para crear nueva categoría
+function crearCategoria() {
+    const formData = new FormData(document.getElementById('form-categoria'));
+    formData.append('action', 'crear');
+    
+    const submitBtn = document.querySelector('#form-categoria button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+    
+    fetch('acciones_categorias.php', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('success', data.message);
+            cerrarModal();
+            
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            mostrarNotificacion('error', data.error || 'Error al crear categoría');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('error', 'Error de conexión');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
+    });
+}
+
+// Función para actualizar categoría existente
+function actualizarCategoria() {
+    const formData = new FormData(document.getElementById('form-categoria'));
+    formData.append('action', 'editar');
+    
+    const submitBtn = document.querySelector('#form-categoria button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Actualizando...';
+    
+    fetch('acciones_categorias.php', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarNotificacion('success', data.message);
+            cerrarModal();
+            
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            mostrarNotificacion('error', data.error || 'Error al actualizar categoría');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('error', 'Error de conexión');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Guardar';
+    });
+}
+
+// Función para cerrar modal
+function cerrarModal() {
+    document.getElementById('modal-categoria').classList.add('hidden');
+    document.getElementById('form-categoria').reset();
+    document.getElementById('categoria-id').value = '';
 }
 </script>
 

@@ -4,7 +4,7 @@ Sistema web para gestión de caja, inventario y ventas desarrollado con PHP, MyS
 
 ## 🚀 Características
 
-- ✅ Sistema de autenticación con roles (admin, cajero, almacén)
+- ✅ Sistema de autenticación con roles (admin y cajero)
 - ✅ Gestión de caja (apertura, cierre, movimientos)
 - ✅ Control de inventario (productos, categorías, stock)
 - ✅ Módulo de ventas con facturación
@@ -16,7 +16,7 @@ Sistema web para gestión de caja, inventario y ventas desarrollado con PHP, MyS
 ## 🛠️ Tecnologías
 
 - PHP 8.2+
-- MySQL/MariaDB
+- MySQL
 - Tailwind CSS 3.x
 - Font Awesome 6.x
 - XAMPP (entorno local)

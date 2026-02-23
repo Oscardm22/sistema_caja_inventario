@@ -17,7 +17,7 @@ if ($stats['caja_actual']) {
 <!-- Estadísticas rápidas -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <!-- Tarjeta de Caja Actual -->
-    <a href="caja/" class="block hover:opacity-90 transition-opacity">
+    <a href="modules/caja/index.php" class="block hover:opacity-90 transition-opacity">
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow border-l-4 border-blue-500">
             <div class="flex items-center mb-4">
                 <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -28,7 +28,7 @@ if ($stats['caja_actual']) {
                     <p class="text-sm text-gray-500"><?php echo $estado_caja; ?></p>
                 </div>
             </div>
-            <p class="text-3xl font-bold text-blue-600">Bs. <?php echo formatCurrency($monto_caja); ?></p>
+            <p class="text-3xl font-bold text-blue-600">$ <?php echo formatCurrency($monto_caja); ?></p>
             <div class="mt-3">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-<?php echo $color_caja; ?>-100 text-<?php echo $color_caja; ?>-800">
                     <i class="fas fa-circle text-xs mr-1"></i>
@@ -39,7 +39,7 @@ if ($stats['caja_actual']) {
     </a>
     
     <!-- Tarjeta de Ventas Hoy -->
-    <a href="ventas/" class="block hover:opacity-90 transition-opacity">
+    <a href="modules/ventas/index.php" class="block hover:opacity-90 transition-opacity">
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow border-l-4 border-green-500">
             <div class="flex items-center mb-4">
                 <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
@@ -50,7 +50,7 @@ if ($stats['caja_actual']) {
                     <p class="text-sm text-gray-500"><?php echo date('d/m/Y'); ?></p>
                 </div>
             </div>
-            <p class="text-3xl font-bold text-green-600">Bs. <?php echo formatCurrency($stats['ventas_hoy']['monto_total'] ?? 0); ?></p>
+            <p class="text-3xl font-bold text-green-600">$ <?php echo formatCurrency($stats['ventas_hoy']['monto_total'] ?? 0); ?></p>
             <p class="text-sm text-gray-500 mt-2">
                 <?php echo $stats['ventas_hoy']['total_ventas'] ?? 0; ?> ventas realizadas
             </p>
@@ -58,7 +58,7 @@ if ($stats['caja_actual']) {
     </a>
     
     <!-- Tarjeta de Productos -->
-    <a href="inventario/" class="block hover:opacity-90 transition-opacity">
+    <a href="modules/inventario/index.php" class="block hover:opacity-90 transition-opacity">
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow border-l-4 border-purple-500">
             <div class="flex items-center mb-4">
                 <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
@@ -85,7 +85,7 @@ if ($stats['caja_actual']) {
     </a>
     
     <!-- Tarjeta de Clientes -->
-    <a href="clientes/" class="block hover:opacity-90 transition-opacity">
+    <a href="modules/clientes/index.php" class="block hover:opacity-90 transition-opacity">
         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow border-l-4 border-yellow-500">
             <div class="flex items-center mb-4">
                 <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
@@ -97,10 +97,6 @@ if ($stats['caja_actual']) {
                 </div>
             </div>
             <p class="text-3xl font-bold text-yellow-600"><?php echo $stats['clientes']['total_clientes'] ?? 0; ?></p>
-            <p class="text-sm text-gray-500 mt-2">
-                <i class="fas fa-star text-yellow-500 mr-1"></i>
-                Sistema de puntos activo
-            </p>
         </div>
     </a>
 </div>
